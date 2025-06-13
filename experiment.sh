@@ -53,7 +53,7 @@ __exec_remote_commands() {
 }
 
 kill_background_jobs() {
-    jobs -p | sed 's/^/-/' | xargs -I '{}' kill -- '{}'
+    jobs -p | xargs -n1 pkill -SIGINT -g
     wait # Wait for jobs to terminate
 }
 
