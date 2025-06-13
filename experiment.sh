@@ -21,7 +21,7 @@ SMALL_POOL="default-pool"
 LARGE_POOL="large-pool"
 
 # NODE FAILURE CONFIGURATION
-NODE_FAILURE_IP="10.1.3.38"
+NODE_FAILURE_IP=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | shuf -n 1)
 NODE_FAILURE_TIME=30
 NODE_FAILURE_DURATION=120
 
@@ -52,7 +52,10 @@ __exec_remote_commands() {
     gcloud compute ssh "$user"@"$ip" --command="bash" <<<"$cmds"
 }
 
+LOG_CPU=true
+
 kill_background_jobs() {
+    LOG_CPU=false
     jobs -p | xargs -n1 pkill -SIGINT -g
     wait # Wait for jobs to terminate
 }
@@ -342,7 +345,7 @@ attach_to_docker_container() {
 
 log_cpu() {
     local interval_secs=10
-    while true; do
+    while [[ "$LOG_CPU" == "true" ]]; do
         TS=$(date +%s)
         kubectl top pod |
             sed -n 's/  */,/gp' |
