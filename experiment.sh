@@ -226,36 +226,59 @@ install_chaos_mesh() {
     rm "$cluster_role"
 }
 
+setup_storage() {
+    local node="$1"
+
+    local remote_cmds=(
+        "mkdir -p /home/$USER/robot-local"
+        "mkdir -p /home/$USER/robot-standard"
+    )
+    __exec_remote_commands "$USER" "$node" "${remote_cmds[@]}"
+
+    local local_storage
+    local_storage=$(mktemp)
+    sed "s/REPLACE_HOSTNAME/$node/g" "$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML" >"$local_storage"
+    sed -i "s/REPLACE_USER/$USER/g" "$local_storage"
+    local standard_storage
+    standard_storage=$(mktemp)
+    sed "s/REPLACE_HOSTNAME/$node/g" "$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML" >"$standard_storage"
+    sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
+
+    kubectl apply -f "$local_storage" -f "$standard_storage"
+}
+
 start_robot_shop_local() {
     if [ ! -d "$HOME/robot-shop" ]; then
         git clone https://github.com/yanniklubas/robot-shop.git "$HOME/robot-shop"
     fi
 
+    kubectl delete pvc --all
+    kubectl delete pv --all
+    kubectl apply -f "$HOME/robot-shop/K8s/local-storage-class.yml"
     local remote_cmds=(
         "mkdir -p /home/$USER/robot-local"
         "mkdir -p /home/$USER/robot-standard"
     )
     __exec_remote_commands "$USER" "$SERVER_IP" "${remote_cmds[@]}"
 
-    local local_storage
-    local_storage=$(mktemp)
-    sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML" >"$local_storage"
-    sed -i "s/REPLACE_USER/$USER/g" "$local_storage"
-    local standard_storage
-    standard_storage=$(mktemp)
-    sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML" >"$standard_storage"
-    sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
+    # local local_storage
+    # local_storage=$(mktemp)
+    # sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML" >"$local_storage"
+    # sed -i "s/REPLACE_USER/$USER/g" "$local_storage"
+    # local standard_storage
+    # standard_storage=$(mktemp)
+    # sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML" >"$standard_storage"
+    # sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
+    export -f __exec_remote_commands
+    export -f setup_storage
+    kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | xargs -I {} bash -c 'setup_storage "$@"' _ {}
 
     if helm list | grep "robot-shop"; then
         helm uninstall robot-shop
         kubectl delete pod rabbitmq-server-0 --wait
         kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]'
-        kubectl delete pvc --all
-        kubectl delete pv --all
         kubectl wait --for=delete pod --all --timeout -1s
     fi
-    kubectl apply -f "$HOME/robot-shop/K8s/local-storage-class.yml"
-    kubectl apply -f "$local_storage" -f "$standard_storage"
     helm install robot-shop "$HOME/robot-shop/K8s/helm/"
     kubectl wait --for=condition=Ready pod --all --timeout -1s
     kubectl delete deployments.apps load
@@ -303,20 +326,8 @@ inject_node_failure() {
     wake_ts=$((start + WARMUP_DURATION + WARMUP_PAUSE + NODE_FAILURE_TIME))
     now_ts=$(now)
     sleep_secs=$((wake_ts - now_ts))
-    kubectl apply -f - <<EOF
-apiVersion: chaos-mesh.org/v1alpha1
-kind: GCPChaos
-metadata:
-  name: node-stop-example
-  namespace: chaos-mesh
-spec:
-  action: node-stop
-  secretName: 'cloud-key-secret'
-  project: '$GCLOUD_PROJECT'
-  zone: '$ZONE'
-  instance: '$NODE_FAILURE_INSTANCE'
-  duration: '${sleep_secs}s'
-EOF
+    sleep "$sleep_secs"
+    gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" --command="sudo poweroff --force"
 }
 
 inject_pod_failure() {
@@ -377,7 +388,7 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 }
 
 log_autoscaler_events() {
-    start_time=$(date -u +%s) && kubectl get events -n kube-system --watch --field-selector involvedObject.name=cluster-autoscaler -o json | jq --unbuffered --argjson start_time "$start_time" '
+    start_time=$(date -u +%s) && kubectl get events --all-namespaces --watch --field-selector involvedObject.name=cluster-autoscaler -o json | jq --unbuffered --argjson start_time "$start_time" '
 select(.lastTimestamp != null or .eventTime != null) |
 .timestamp = (.lastTimestamp // .eventTime) |
 .clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
@@ -386,19 +397,32 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 ' >"$OUTPUT_DIR/autoscaling_events.json"
 }
 
+log_node_events() {
+    start_time=$(date -u +%s) && kubectl get events --all-namespaces --watch --field-selector involvedObject.kind=Node -o json | jq --unbuffered --argjson start_time "$start_time" '
+select(.reason=="NodeReady" or .reason=="NodeNotReady") |
+select(.lastTimestamp != null or .eventTime != null) |
+.timestamp = (.lastTimestamp // .eventTime) |
+.clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
+select((.clean_timestamp | fromdateiso8601) > $start_time) |
+{namespace: .metadata.namespace, pod: .involvedObject.name, reason: .reason, message: .message, time: .timestamp}
+' >"$OUTPUT_DIR/node_events.json"
+
+}
+
 main() {
     local repeats="${1:-1}"
-    OUTPUT_DIR="$PWD/$EXPERIMENT_NAME"
-    backup_dir "$OUTPUT_DIR"
+    BASE_DIR="$PWD/$EXPERIMENT_NAME"
+    backup_dir "$BASE_DIR"
     for ((i = 0; i < repeats; i++)); do
-        OUTPUT_DIR="$OUTPUT_DIR/$EXPERIMENT_MODE-failure-experiment-$i"
+        OUTPUT_DIR="$BASE_DIR/$EXPERIMENT_MODE-failure-experiment-$i"
         mkdir -p "$OUTPUT_DIR"
 
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             install_chaos_mesh
         fi
         if [ "$EXPERIMENT_MODE" = "node" ]; then
-            install_chaos_mesh
+            log_node_events &
+            PIDS+=($!)
         fi
         if [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
