@@ -397,6 +397,9 @@ main() {
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             install_chaos_mesh
         fi
+        if [ "$EXPERIMENT_MODE" = "node" ]; then
+            install_chaos_mesh
+        fi
         if [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
             log_autoscaler_events &
