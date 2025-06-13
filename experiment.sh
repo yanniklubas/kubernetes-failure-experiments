@@ -56,7 +56,7 @@ LOG_CPU=true
 
 kill_background_jobs() {
     LOG_CPU=false
-    jobs -p | xargs -n1 pkill -SIGINT -g
+    jobs -p | xargs -n1 pkill -SIGTERM -g
     wait # Wait for jobs to terminate
 }
 
