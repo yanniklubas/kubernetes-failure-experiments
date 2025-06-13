@@ -21,9 +21,13 @@ SMALL_POOL="default-pool"
 LARGE_POOL="large-pool"
 
 # NODE FAILURE CONFIGURATION
-NODE_FAILURE_IP=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | shuf -n 1)
+select_node_failure_instance() {
+    local instance
+    instance=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | shuf -n 1)
+    echo "$instance"
+}
+NODE_FAILURE_INSTANCE=$(select_node_failure_instance)
 NODE_FAILURE_TIME=30
-NODE_FAILURE_DURATION=120
 
 # POD FAILURE CONFIGURATION
 POD_FAILURE_NAME="catalogue"
@@ -60,7 +64,8 @@ kill_background_jobs() {
     for pid in "${PIDS[@]}"; do
         kill "$pid" 2>/dev/null
     done
-    wait "${PIDS[@]}" 2>/dev/null
+    wait "${PIDS[@]}" 2>/dev/null || true
+    PIDS=()
 }
 
 cleanup() {
@@ -156,9 +161,8 @@ save_config() {
     case "$EXPERIMENT_MODE" in
     "node")
         {
-            printf "failure_ip: %s\n" "$NODE_FAILURE_IP"
+            printf "failure_instance: %s\n" "$NODE_FAILURE_INSTANCE"
             printf "failure_time: %s\n" "$NODE_FAILURE_TIME"
-            printf "failure_duration: %s\n" "$NODE_FAILURE_DURATION"
         } >>"$out"
         ;;
     "pod")
@@ -299,17 +303,20 @@ inject_node_failure() {
     wake_ts=$((start + WARMUP_DURATION + WARMUP_PAUSE + NODE_FAILURE_TIME))
     now_ts=$(now)
     sleep_secs=$((wake_ts - now_ts))
-    local remote_cmds=(
-        "sleep $sleep_secs"
-        "sudo systemctl stop kubelet.service containerd.service"
-        "pgrep containerd | xargs sudo kill"
-        "sleep $NODE_FAILURE_DURATION"
-        "sudo systemctl start kubelet.service containerd.service"
-    )
-
-    log_info "Sleeping for ${sleep_secs}s"
-    __exec_remote_commands "$USER" "$NODE_FAILURE_IP" "${remote_cmds[@]}"
-    log_info "Injected Failure"
+    kubectl apply -f - <<EOF
+apiVersion: chaos-mesh.org/v1alpha1
+kind: GCPChaos
+metadata:
+  name: node-stop-example
+  namespace: chaos-mesh
+spec:
+  action: node-stop
+  secretName: 'cloud-key-secret'
+  project: '$GCLOUD_PROJECT'
+  zone: '$ZONE'
+  instance: '$NODE_FAILURE_INSTANCE'
+  duration: '${sleep_secs}s'
+EOF
 }
 
 inject_pod_failure() {
@@ -429,6 +436,10 @@ main() {
   "ready_duration_secs: \($ready - $start)"
 ' >"$OUTPUT_DIR/ready_duration.yml"
             kubectl delete podchaos --all
+        fi
+
+        if [ "$EXPERIMENT_MODE" = "node" ]; then
+            kubectl delete gcpchaos --all
         fi
 
         if [ "$EXPERIMENT_MODE" = "real" ]; then
