@@ -53,11 +53,14 @@ __exec_remote_commands() {
 }
 
 LOG_CPU=true
+PIDS=()
 
 kill_background_jobs() {
     LOG_CPU=false
-    jobs -p | xargs -n1 pkill -SIGTERM -g
-    wait # Wait for jobs to terminate
+    for pid in "${PIDS[@]}"; do
+        kill "$pid" 2>/dev/null
+    done
+    wait "${PIDS[@]}" 2>/dev/null
 }
 
 cleanup() {
@@ -390,10 +393,12 @@ main() {
         if [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
             log_autoscaler_events &
+            PIDS+=($!)
         fi
 
         log_info "Starting Robot Shop"
         log_scheduling_events &
+        PIDS+=($!)
         start_robot_shop_local
         save_config
         log_info "Starting LoadGenerator and saving initial schedule"
@@ -401,10 +406,15 @@ main() {
         log_info "Saved initial_schedule"
         start_loadgenerator
         log_cpu &
+        PIDS+=($!)
         log_info "Started Loadgenerator"
         case "$EXPERIMENT_MODE" in
-        "node") inject_node_failure "$(now)" & ;;
-        "pod") inject_pod_failure "$(now)" & ;;
+        "node")
+            inject_node_failure "$(now)" &
+            ;;
+        "pod")
+            inject_pod_failure "$(now)" &
+            ;;
         "real") ;;
         "*") echo "INVALID EXPERIMENT MODE $EXPERIMENT_MODE" >&2 ;;
         esac
