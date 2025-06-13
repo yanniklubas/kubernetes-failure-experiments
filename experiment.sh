@@ -4,10 +4,10 @@ set -eou pipefail
 # GENERAL CONFIGURATION
 # SERVER_IP=$(kubectl get nodes | grep large-pool | awk '{print $1}')
 EMAIL="mygcloud@email.com"
-OUTPUT_DIR="$PWD/pod-failure-without-retry/$EXPERIMENT_MODE-failure-experiment"
 LOCAL_STORAGE_YAML="robot-local-storage.yml"
 STANDARD_STORAGE_YAML="robot-standard-storage.yml"
 EXPERIMENT_MODE="pod" # "node" or "pod" or "real"
+EXPERIMENT_NAME="pod-failure-without-retry"
 if [ "$EXPERIMENT_MODE" = "real" ]; then
     SERVER_IP=$(kubectl get nodes | grep default-pool | awk '{print $1}' | head -n 1)
 else
@@ -374,51 +374,56 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 }
 
 main() {
+    local repeats="${1:-1}"
+    OUTPUT_DIR="$PWD/$EXPERIMENT_NAME"
     backup_dir "$OUTPUT_DIR"
-    mkdir -p "$OUTPUT_DIR"
+    for ((i = 0; i < repeats; i++)); do
+        OUTPUT_DIR="$OUTPUT_DIR/$EXPERIMENT_MODE-failure-experiment-$i"
+        mkdir -p "$OUTPUT_DIR"
 
-    if [ "$EXPERIMENT_MODE" = "pod" ]; then
-        install_chaos_mesh
-    fi
-    if [ "$EXPERIMENT_MODE" = "real" ]; then
-        setup_autoscaling
-        log_autoscaler_events &
-    fi
+        if [ "$EXPERIMENT_MODE" = "pod" ]; then
+            install_chaos_mesh
+        fi
+        if [ "$EXPERIMENT_MODE" = "real" ]; then
+            setup_autoscaling
+            log_autoscaler_events &
+        fi
 
-    log_info "Starting Robot Shop"
-    log_scheduling_events &
-    start_robot_shop_local
-    save_config
-    log_info "Starting LoadGenerator and saving initial schedule"
-    kubectl get pods -o wide >"$OUTPUT_DIR/schedule.log"
-    log_info "Saved initial_schedule"
-    start_loadgenerator
-    log_cpu &
-    log_info "Started Loadgenerator"
-    case "$EXPERIMENT_MODE" in
-    "node") inject_node_failure "$(now)" & ;;
-    "pod") inject_pod_failure "$(now)" & ;;
-    "real") ;;
-    "*") echo "INVALID EXPERIMENT MODE $EXPERIMENT_MODE" >&2 ;;
-    esac
-    attach_to_docker_container
-    if [ "$EXPERIMENT_MODE" = "pod" ]; then
-        local pod
-        pod=$(kubectl get pod | grep "$POD_FAILURE_NAME" | awk '{print $1}')
-        kubectl get pod "$pod" -o json | jq -r '
+        log_info "Starting Robot Shop"
+        log_scheduling_events &
+        start_robot_shop_local
+        save_config
+        log_info "Starting LoadGenerator and saving initial schedule"
+        kubectl get pods -o wide >"$OUTPUT_DIR/schedule.log"
+        log_info "Saved initial_schedule"
+        start_loadgenerator
+        log_cpu &
+        log_info "Started Loadgenerator"
+        case "$EXPERIMENT_MODE" in
+        "node") inject_node_failure "$(now)" & ;;
+        "pod") inject_pod_failure "$(now)" & ;;
+        "real") ;;
+        "*") echo "INVALID EXPERIMENT MODE $EXPERIMENT_MODE" >&2 ;;
+        esac
+        attach_to_docker_container
+        if [ "$EXPERIMENT_MODE" = "pod" ]; then
+            local pod
+            pod=$(kubectl get pod | grep "$POD_FAILURE_NAME" | awk '{print $1}')
+            kubectl get pod "$pod" -o json | jq -r '
   .status as $status |
   ($status.startTime | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $start |
   ($status.conditions[] | select(.type == "Ready") | .lastTransitionTime | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $ready |
   "ready_duration_secs: \($ready - $start)"
 ' >"$OUTPUT_DIR/ready_duration.yml"
-        kubectl delete podchaos --all
-    fi
+            kubectl delete podchaos --all
+        fi
 
-    if [ "$EXPERIMENT_MODE" = "real" ]; then
-        cleanup_autoscaling
-    fi
+        if [ "$EXPERIMENT_MODE" = "real" ]; then
+            cleanup_autoscaling
+        fi
 
-    kill_background_jobs
+        kill_background_jobs
+    done
 }
 
 main "$@"
