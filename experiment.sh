@@ -426,6 +426,7 @@ main() {
         fi
 
         kill_background_jobs
+        log_info "Finished experiment"
     done
 }
 
