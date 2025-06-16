@@ -256,6 +256,12 @@ start_robot_shop_local() {
         git clone https://github.com/yanniklubas/robot-shop.git "$HOME/robot-shop"
     fi
 
+    if helm list | grep "robot-shop"; then
+        helm uninstall robot-shop
+        kubectl delete pod rabbitmq-server-0 --wait
+        kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]'
+        kubectl wait --for=delete pod --all --timeout -1s
+    fi
     kubectl delete pvc --all
     kubectl delete pv --all
     kubectl apply -f "$HOME/robot-shop/K8s/local-storage-class.yml"
@@ -277,12 +283,6 @@ start_robot_shop_local() {
     export -f setup_storage
     kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
 
-    if helm list | grep "robot-shop"; then
-        helm uninstall robot-shop
-        kubectl delete pod rabbitmq-server-0 --wait
-        kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]'
-        kubectl wait --for=delete pod --all --timeout -1s
-    fi
     helm install robot-shop "$HOME/robot-shop/K8s/helm/"
     kubectl wait --for=condition=Ready pod --all --timeout -1s
     kubectl delete deployments.apps load
