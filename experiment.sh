@@ -239,10 +239,12 @@ setup_storage() {
     local_storage=$(mktemp)
     sed "s/REPLACE_HOSTNAME/$node/g" "$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML" >"$local_storage"
     sed -i "s/REPLACE_USER/$USER/g" "$local_storage"
+    sed -i "s/REPLACE_NODE/$node/g" "$local_storage"
     local standard_storage
     standard_storage=$(mktemp)
     sed "s/REPLACE_HOSTNAME/$node/g" "$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML" >"$standard_storage"
     sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
+    sed -i "s/REPLACE_NODE/$node/g" "$standard_storage"
 
     kubectl apply -f "$local_storage" -f "$standard_storage"
     rm "$local_storage"
