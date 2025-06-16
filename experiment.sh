@@ -62,7 +62,9 @@ PIDS=()
 kill_background_jobs() {
     LOG_CPU=false
     for pid in "${PIDS[@]}"; do
-        kill "$pid" 2>/dev/null
+        if ! kill "$pid" 2>/dev/null; then
+            log_info "failed to kill PID $pid"
+        fi
     done
     wait "${PIDS[@]}" 2>/dev/null || true
     PIDS=()
