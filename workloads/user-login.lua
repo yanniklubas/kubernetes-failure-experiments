@@ -24,5 +24,9 @@ end
 		Variant of extractMatches with a matching regex defining the string that is to be extracted.
 --]]
 function onCall(callnum)
-	return BASE_URL .. PATH .. JSON
+	if callnum == 1 then
+		return BASE_URL .. PATH .. JSON
+	else
+		return nil
+	end
 end

@@ -24,6 +24,10 @@ end
 		Variant of extractMatches with a matching regex defining the string that is to be extracted.
 --]]
 function onCall(callnum)
-	local rating = math.random(5)
-	return PREFIX .. PATH .. PRODUCT .. rating
+	if callnum == 1 then
+		local rating = math.random(5)
+		return PREFIX .. PATH .. PRODUCT .. rating
+	else
+		return nil
+	end
 end

@@ -23,6 +23,10 @@ end
 		Variant of extractMatches with a matching regex defining the string that is to be extracted.
 --]]
 function onCall(callnum)
-	local userId = math.random(100)
-	return BASE_URL .. PREFIX_PATH .. userId
+	if callnum == 1 then
+		local userId = math.random(100)
+		return BASE_URL .. PREFIX_PATH .. userId
+	else
+		return nil
+	end
 end
