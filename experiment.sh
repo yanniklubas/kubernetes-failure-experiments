@@ -245,6 +245,8 @@ setup_storage() {
     sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
 
     kubectl apply -f "$local_storage" -f "$standard_storage"
+    rm "$local_storage"
+    rm "$standard_storage"
 }
 
 start_robot_shop_local() {
@@ -282,8 +284,6 @@ start_robot_shop_local() {
     helm install robot-shop "$HOME/robot-shop/K8s/helm/"
     kubectl wait --for=condition=Ready pod --all --timeout -1s
     kubectl delete deployments.apps load
-    rm "$local_storage"
-    rm "$standard_storage"
 }
 
 start_loadgenerator() {
