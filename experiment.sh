@@ -377,8 +377,7 @@ log_cpu() {
 }
 
 log_scheduling_events() {
-    start_time=$(date -u +%s) && kubectl get events --all-namespaces --watch --field-selector involvedObject.kind=Pod,reason=Scheduled -o json | jq --unbuffered --argjson start_time "$start_time" '
-select(.involvedObject.kind=="Pod" and .reason=="Scheduled") |
+    start_time=$(date -u +%s) && kubectl get events --all-namespaces --watch --field-selector involvedObject.kind=Pod -o json | jq --unbuffered --argjson start_time "$start_time" '
 select(.lastTimestamp != null or .eventTime != null) |
 .timestamp = (.lastTimestamp // .eventTime) |
 .clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
