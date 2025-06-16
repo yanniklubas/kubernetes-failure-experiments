@@ -273,7 +273,7 @@ start_robot_shop_local() {
     # sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
     export -f __exec_remote_commands
     export -f setup_storage
-    kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | xargs -I {} bash -c 'setup_storage "$@"' _ {}
+    kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
 
     if helm list | grep "robot-shop"; then
         helm uninstall robot-shop
