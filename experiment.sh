@@ -290,6 +290,22 @@ start_robot_shop_local() {
     kubectl delete deployments.apps load
 }
 
+get_web_ip_and_port() {
+    local max_tries=5
+    local stdout
+    stdout=$(mktemp)
+    for ((i = 0; i < "$max_tries"; i++)); do
+        if kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[?(@.name=="http")].port}' >"$stdout"; then
+            cat "$stdout"
+            return 0
+        fi
+        sleep 1
+        truncate -s 0 "$stdout"
+    done
+
+    return 1
+}
+
 start_loadgenerator() {
     if [ ! -d "load-generator" ]; then
         git clone https://github.com/yanniklubas/HTTP-Load-Generator.git "load-generator"
@@ -301,7 +317,7 @@ start_loadgenerator() {
         local lua_file
         lua_file=$(mktemp)
         local ip_and_port
-        ip_and_port=$(kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[?(@.name=="http")].port}')
+        ip_and_port=$(get_web_ip_and_port)
         local ip=${ip_and_port%:*}
         local port=${ip_and_port#*:}
         sed "s/REPLACE_HOSTNAME/$ip/g" "$LUA_FILE" >"$lua_file"
