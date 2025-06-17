@@ -68,6 +68,19 @@ kill_background_jobs() {
     done
     wait "${PIDS[@]}" 2>/dev/null || true
     PIDS=()
+    LOG_CPU=true
+}
+
+query_prometheus_cpu() {
+    local ip
+
+    ip=$(kubectl get service prometheus -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    local duration
+    duration=$(wc -l "$PROFILE" | awk '{ print $1 }')
+    duration=$((duration += 120))
+    curl -G "http://$ip/api/v1/query" \
+        --data-urlencode 'query=container_cpu_user_seconds_total{container_label_io_kubernetes_pod_namespace="default"}['"$duration"'s]' \
+        -o "$OUTPUT_DIR/cpu.json"
 }
 
 cleanup() {
@@ -458,8 +471,6 @@ main() {
         kubectl get pods -o wide >"$OUTPUT_DIR/schedule.log"
         log_info "Saved initial_schedule"
         start_loadgenerator
-        log_cpu &
-        PIDS+=($!)
         log_info "Started Loadgenerator"
         case "$EXPERIMENT_MODE" in
         "node")
@@ -472,6 +483,7 @@ main() {
         "*") echo "INVALID EXPERIMENT MODE $EXPERIMENT_MODE" >&2 ;;
         esac
         attach_to_docker_container
+        query_prometheus_cpu
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             local pod
             pod=$(kubectl get pod | grep "$POD_FAILURE_NAME" | awk '{print $1}')
