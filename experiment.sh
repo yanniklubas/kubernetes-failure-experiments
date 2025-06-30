@@ -436,11 +436,27 @@ start_robot_shop() {
         done
     }
 
+    wait_for_deleted_services() {
+        for service in "$@"; do
+            log_debug "Waiting for service '$service' to have terminated..."
+            log_command "kubectl wait --for=delete pod -l \"service=$service\" --timeout -1s" || true
+            log_success "Service '$service' terminated"
+        done
+    }
+
     apply_services() {
         for service in "$@"; do
             log_info "Applying service: $service"
             log_command "kubectl apply -f \"$prefix/$service-deployment.yaml\""
             log_command "kubectl apply -f \"$prefix/$service-service.yaml\""
+        done
+    }
+
+    wait_for_services_ready() {
+        for service in "$@"; do
+            log_debug "Waiting for service '$service' to be ready..."
+            log_command "kubectl wait --for=condition=Ready pod -l \"service=$service\" --timeout -1s" || true
+            log_success "Service '$service' is ready"
         done
     }
 
@@ -458,8 +474,8 @@ start_robot_shop() {
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
 
         log_info "Waiting for all pods to terminate..."
-        log_command helm uninstall rabbitmq-operator
-        log_command "kubectl wait --for=delete pod --all --timeout -1s"
+        wait_for_deleted_services "${app_services[@]}"
+        wait_for_deleted_services "${infra_services[@]}"
     fi
 
     log_info "Generating Helm manifests for Robot Shop..."
@@ -516,7 +532,8 @@ start_robot_shop() {
     apply_services "${app_services[@]}"
 
     log_info "Waiting for all pods to become ready..."
-    log_command "kubectl wait --for=condition=Ready pod --all --timeout -1s"
+    wait_for_services_ready "${app_services[@]}"
+    wait_for_services_ready "${infra_services[@]}"
 
     log_success "Robot Shop is up and running!"
 }
