@@ -83,10 +83,27 @@ query_prometheus_cpu() {
         -o "$OUTPUT_DIR/cpu.json"
 }
 
+query_creo_monitor() {
+    local start="$1"
+    local end="$2"
+
+    local ip
+    ip=$(kubectl get service creo-monitor-svc -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    curl "http://$ip/export?from=$start&to=$end" \
+        -o "$OUTPUT_DIR/creo_cpu.json"
+}
+
+get_pod_and_container_ids() {
+    kubectl get pods -o custom-columns=Name:.metadata.name,PodID:.metadata.uid,ContainerID:.status.containerStatuses[*].containerID | sed 's/containerd:\/\///g'
+}
+
 cleanup() {
     echo "Caught Ctrl+C! Cleaning up..."
     # Kill all background jobs started by this script
     kill_background_jobs
+    if [ "$EXPERIMENT_MODE" = "real" ]; then
+        cleanup_autoscaling
+    fi
     exit 1
 }
 
@@ -97,7 +114,7 @@ hostname_to_ip() {
 }
 
 now() {
-    date +%s
+    date "+%s"
 }
 
 setup_autoscaling() {
@@ -271,36 +288,202 @@ start_robot_shop_local() {
         git clone https://github.com/yanniklubas/robot-shop.git "$HOME/robot-shop"
     fi
 
-    if helm list | grep "robot-shop"; then
-        helm uninstall robot-shop
-        kubectl delete pod rabbitmq-server-0 --wait
-        kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]'
+    local prefix="$HOME/robot-yamls/robot-shop/templates"
+    if [ -d "$HOME/robot-yamls" ]; then
+        kubectl delete -f "$prefix/redis-statefulset.yaml" || true
+        kubectl delete -f "$prefix/redis-service.yaml" || true
+
+        services=("mongodb" "mysql" "rabbitmq")
+        for service in "${services[@]}"; do
+            kubectl delete -f "$prefix/$service-deployment.yaml" || true
+            kubectl delete -f "$prefix/$service-service.yaml" || true
+        done
+
+        services=("cart" "catalogue" "dispatch" "payment" "ratings" "shipping" "user" "web")
+        for service in "${services[@]}"; do
+            kubectl delete -f "$prefix/$service-deployment.yaml" || true
+            kubectl delete -f "$prefix/$service-service.yaml" || true
+        done
+        kubectl delete pod rabbitmq-server-0 --wait || true
+        kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json --patch='[ { "op": "remove", "path": "/metadata/finalizers" } ]' || true
         kubectl wait --for=delete pod --all --timeout -1s
     fi
+    mkdir -p "$HOME/robot-yamls"
+    helm template robot-shop "$HOME/robot-shop/K8s/helm" --output-dir "$HOME/robot-yamls"
+
     kubectl delete pvc --all
     kubectl delete pv --all
     kubectl apply -f "$HOME/robot-shop/K8s/local-storage-class.yml"
-    local remote_cmds=(
-        "mkdir -p /home/$USER/robot-local"
-        "mkdir -p /home/$USER/robot-standard"
-    )
-    __exec_remote_commands "$USER" "$SERVER_IP" "${remote_cmds[@]}"
+    # local remote_cmds=(
+    #     "mkdir -p /home/$USER/robot-local"
+    #     "mkdir -p /home/$USER/robot-standard"
+    # )
+    # __exec_remote_commands "$USER" "$SERVER_IP" "${remote_cmds[@]}"
 
-    # local local_storage
-    # local_storage=$(mktemp)
-    # sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML" >"$local_storage"
-    # sed -i "s/REPLACE_USER/$USER/g" "$local_storage"
-    # local standard_storage
-    # standard_storage=$(mktemp)
-    # sed "s/REPLACE_HOSTNAME/$SERVER_IP/g" "$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML" >"$standard_storage"
-    # sed -i "s/REPLACE_USER/$USER/g" "$standard_storage"
     export -f __exec_remote_commands
     export -f setup_storage
     kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
 
-    helm install robot-shop "$HOME/robot-shop/K8s/helm/"
+    kubectl apply -f "$prefix/redis-statefulset.yaml"
+    kubectl apply -f "$prefix/redis-service.yaml"
+
+    services=("mongodb" "mysql" "rabbitmq")
+    for service in "${services[@]}"; do
+        kubectl apply -f "$prefix/$service-deployment.yaml"
+        kubectl apply -f "$prefix/$service-service.yaml"
+    done
+
+    services=("cart" "catalogue" "dispatch" "payment" "ratings" "shipping" "user" "web")
+    for service in "${services[@]}"; do
+        kubectl apply -f "$prefix/$service-deployment.yaml"
+        kubectl apply -f "$prefix/$service-service.yaml"
+    done
+
     kubectl wait --for=condition=Ready pod --all --timeout -1s
-    kubectl delete deployments.apps load
+}
+
+measure_node_latencies() {
+    #     local prefix="$1"
+    #     local namespace="kube-system"
+    #     local label="app=nping"
+    #     local output_file="$OUTPUT_DIR/$prefix-rtt-measurements.json"
+    #     local log_file="$OUTPUT_DIR/$prefix-rrt-schedule.json"
+    #     local tmp_file
+    #     local ping_count=30
+    #     tmp_file=$(mktemp)
+    #
+    #     log_info "Starting nping daemon sets for node RTT measurements"
+    #     kubectl apply -f nping.yaml
+    #     kubectl wait -n kube-system --for=condition=Ready pod -l "$label" --timeout -1s
+    #     log_info "Started nping daemon sets for node RTT measurements"
+    #     kubectl get pods -n "$namespace" -l "$label" -o=jsonpath='{range .items[*]}{"{\"podName\":\""}{.metadata.name}{"\",\"podIP\":\""}{.status.podIP}{"\",\"nodeName\":\""}{.spec.nodeName}{"\",\"nodeIP\":\""}{.status.hostIP}{"\"}\n"}{end}' >"$log_file"
+    #
+    #     mapfile -t PODS < <(kubectl get pods -n "$namespace" -l "$label" -o jsonpath="{range .items[*]}{.metadata.name} {.status.hostIP}{'\n'}{end}")
+    #
+    #     if [[ ${#PODS[@]} -lt 2 ]]; then
+    #         echo "[ERROR] Need at least two pods for node RTT measurements."
+    #         exit 1
+    #     fi
+    #
+    #     echo "[" >"$tmp_file"
+    #
+    #     for SRC in "${PODS[@]}"; do
+    #         SRC_POD=$(echo "$SRC" | awk '{print $1}')
+    #         SRC_IP=$(echo "$SRC" | awk '{print $2}')
+    #
+    #         for DST in "${PODS[@]}"; do
+    #             DST_POD=$(echo "$DST" | awk '{print $1}')
+    #             DST_IP=$(echo "$DST" | awk '{print $2}')
+    #
+    #             # Skip self-pings
+    #             if [[ "$SRC_POD" == "$DST_POD" ]]; then
+    #                 continue
+    #             fi
+    #
+    #             echo "[TEST] $SRC_IP ($SRC_POD) → $DST_IP ($DST_POD)"
+    #
+    #             RESULT=$(kubectl exec -n "$namespace" "$SRC_POD" -- \
+    #                 nping --tcp -p 5201 --count "$ping_count" "$DST_IP" 2>/dev/null)
+    #
+    #             MIN=$(echo "$RESULT" | grep 'Min rtt' | sed -E 's/.*Min rtt: ([0-9.]+)ms.*/\1/')
+    #             AVG=$(echo "$RESULT" | grep 'Avg rtt' | sed -E 's/.*Avg rtt: ([0-9.]+)ms.*/\1/')
+    #             MAX=$(echo "$RESULT" | grep 'Max rtt' | sed -E 's/.*Max rtt: ([0-9.]+)ms.*/\1/')
+    #             STDDEV=$(echo "$RESULT" | grep 'Stddev' | sed -E 's/.*Stddev: ([0-9.]+)ms.*/\1/')
+    #
+    #             cat <<EOF >>"$tmp_file"
+    #   {
+    #     "source_pod": "$SRC_POD",
+    #     "source_ip": "$SRC_IP",
+    #     "target_pod": "$DST_POD",
+    #     "target_ip": "$DST_IP",
+    #     "rtt_min_ms": $MIN,
+    #     "rtt_avg_ms": $AVG,
+    #     "rtt_max_ms": $MAX,
+    #     "rtt_stddev_ms": $STDDEV
+    #   },
+    # EOF
+    #         done
+    #     done
+    #
+    #     # Finalize JSON array
+    #     sed -i '$ s/},/}/' "$tmp_file"
+    #     echo "]" >>"$tmp_file"
+    #     mv "$tmp_file" "$output_file"
+    #
+    #     echo "[DONE] All-to-all RTT results written to $output_file"
+
+    local prefix="$1"
+    local namespace="kube-system"
+    local label="app=netperf"
+    local output_file="$OUTPUT_DIR/$prefix-rtt-measurements.json"
+    local log_file="$OUTPUT_DIR/$prefix-rrt-schedule.json"
+    local tmp_file
+    local duration=5 # seconds for each netperf test
+    tmp_file=$(mktemp)
+
+    log_info "Starting netperf daemon sets for node RTT measurements"
+    kubectl apply -f netperf.yaml
+    kubectl wait -n "$namespace" --for=condition=Ready pod -l "$label" --timeout -1s
+    log_info "Started netperf daemon sets for node RTT measurements"
+
+    kubectl get pods -n "$namespace" -l "$label" -o=jsonpath='{range .items[*]}{"{\"podName\":\""}{.metadata.name}{"\",\"podIP\":\""}{.status.podIP}{"\",\"nodeName\":\""}{.spec.nodeName}{"\",\"nodeIP\":\""}{.status.hostIP}{"\"}\n"}{end}' >"$log_file"
+
+    mapfile -t PODS < <(kubectl get pods -n "$namespace" -l "$label" -o jsonpath="{range .items[*]}{.metadata.name} {.status.podIP}{'\n'}{end}")
+
+    if [[ ${#PODS[@]} -lt 2 ]]; then
+        echo "[ERROR] Need at least two pods for node RTT measurements."
+        exit 1
+    fi
+
+    echo "[" >"$tmp_file"
+
+    for SRC in "${PODS[@]}"; do
+        SRC_POD=$(echo "$SRC" | awk '{print $1}')
+        SRC_IP=$(echo "$SRC" | awk '{print $2}')
+
+        for DST in "${PODS[@]}"; do
+            DST_POD=$(echo "$DST" | awk '{print $1}')
+            DST_IP=$(echo "$DST" | awk '{print $2}')
+
+            if [[ "$SRC_POD" == "$DST_POD" ]]; then
+                continue
+            fi
+
+            echo "[TEST] $SRC_IP ($SRC_POD) → $DST_IP ($DST_POD)"
+
+            RESULT=$(kubectl exec -n "$namespace" "$SRC_POD" -c netperf -- \
+                netperf -H "$DST_IP" -l "$duration" -t TCP_RR -- -o min_latency,max_latency,mean_latency,stddev_latency,p50_latency,p90_latency,p99_latency 2>&1)
+
+            IFS=',' read -r -a LATENCIES <<<"${RESULT##*$'\n'}"
+
+            cat <<EOF >>"$tmp_file"
+  {
+    "source_pod": "$SRC_POD",
+    "source_ip": "$SRC_IP",
+    "target_pod": "$DST_POD",
+    "target_ip": "$DST_IP",
+    "min_latency_ms": ${LATENCIES[0]},
+    "max_latency_ms": ${LATENCIES[1]},
+    "mean_latency_ms": ${LATENCIES[2]},
+    "stddev_latency_ms": ${LATENCIES[3]},
+    "p50_latency_ms": ${LATENCIES[4]},
+    "p90_latency_ms": ${LATENCIES[5]},
+    "p99_latency_ms": ${LATENCIES[6]},
+  },
+EOF
+        done
+    done
+
+    # Finalize JSON array
+    sed -i '$ s/},/}/' "$tmp_file"
+    echo "]" >>"$tmp_file"
+    mv "$tmp_file" "$output_file"
+
+    kubectl delete -f netperf.yaml
+    kubectl wait -n "$namespace" --for=delete pod -l "$label" --timeout -1s
+
+    echo "[DONE] All-to-all RTT results written to $output_file"
+
 }
 
 get_web_ip_and_port() {
@@ -451,10 +634,7 @@ main() {
 
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             install_chaos_mesh
-        fi
-        if [ "$EXPERIMENT_MODE" = "node" ]; then
-            log_node_events &
-            PIDS+=($!)
+            kubectl delete podchaos --all || true
         fi
         if [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
@@ -462,15 +642,23 @@ main() {
             PIDS+=($!)
         fi
 
+        log_info "Measuring node to node latency"
+        measure_node_latencies "start"
+
         log_info "Starting Robot Shop"
         log_scheduling_events &
+        PIDS+=($!)
+        log_node_events &
         PIDS+=($!)
         start_robot_shop_local
         save_config
         log_info "Starting LoadGenerator and saving initial schedule"
         kubectl get pods -o wide >"$OUTPUT_DIR/schedule.log"
         log_info "Saved initial_schedule"
+        get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.log"
         start_loadgenerator
+        local start
+        start=$(now)
         log_info "Started Loadgenerator"
         case "$EXPERIMENT_MODE" in
         "node")
@@ -483,7 +671,10 @@ main() {
         "*") echo "INVALID EXPERIMENT MODE $EXPERIMENT_MODE" >&2 ;;
         esac
         attach_to_docker_container
-        query_prometheus_cpu
+        local end
+        end=$(now)
+        # query_prometheus_cpu
+        query_creo_monitor "$start" "$end"
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             local pod
             pod=$(kubectl get pod | grep "$POD_FAILURE_NAME" | awk '{print $1}')
@@ -496,17 +687,16 @@ main() {
             kubectl delete podchaos --all
         fi
 
-        if [ "$EXPERIMENT_MODE" = "node" ]; then
-            kubectl delete gcpchaos --all
-        fi
-
-        if [ "$EXPERIMENT_MODE" = "real" ]; then
-            cleanup_autoscaling
-        fi
-
         kill_background_jobs
+        log_info "Measuring node to node latency"
+        measure_node_latencies "start"
+
         log_info "Finished experiment"
     done
+    if [ "$EXPERIMENT_MODE" = "real" ]; then
+        cleanup_autoscaling
+    fi
+    rm -r "$HOME/robot-yamls"
 }
 
 main "$@"
