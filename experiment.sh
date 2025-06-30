@@ -531,6 +531,13 @@ measure_node_latencies() {
 
     log_info "Starting netperf daemon sets for node RTT measurements"
     log_command kubectl apply -f netperf.yaml
+    for attempt in {1..30}; do
+        if log_command "kubectl get pods -n \"$namespace\" -l \"$label\" | grep -q netperf"; then
+            break
+        fi
+        log_debug "Waiting for netperf pods to be created ($attempt/30)..."
+        sleep 1
+    done
     log_command kubectl wait -n "$namespace" --for=condition=Ready pod -l "$label" --timeout -1s
     log_info "Netperf daemonsets are ready"
 
