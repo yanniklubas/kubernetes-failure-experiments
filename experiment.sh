@@ -501,7 +501,7 @@ start_robot_shop() {
         log_info "Adding RabbitMQOperator Helm repo..."
         log_command helm repo add rabbitmq https://charts.bitnami.com/bitnami
         log_info "Installing RabbitMQOperator..."
-        helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
+        log_command helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
     fi
 
     log_info "Deploying Redis..."
