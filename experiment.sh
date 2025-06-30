@@ -543,7 +543,7 @@ measure_node_latencies() {
     local namespace="kube-system"
     local label="app=netperf"
     local output_file="$OUTPUT_DIR/$prefix-rtt-measurements.json"
-    local log_file="$OUTPUT_DIR/$prefix-rrt-schedule.json"
+    local log_file="$OUTPUT_DIR/$prefix-rtt-schedule.json"
     local tmp_file
     local duration=5 # seconds for each netperf test
 
