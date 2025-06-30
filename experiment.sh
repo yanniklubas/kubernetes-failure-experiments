@@ -431,8 +431,8 @@ start_robot_shop() {
     delete_services() {
         for service in "$@"; do
             log_debug "Deleting service: $service"
-            log_command "kubectl delete -f \"$prefix/$service-deployment.yaml\" || true"
-            log_command "kubectl delete -f \"$prefix/$service-service.yaml\" || true"
+            log_command "kubectl delete -f \"$prefix/$service-deployment.yaml\" --now --timeout 1s || true"
+            log_command "kubectl delete -f \"$prefix/$service-service.yaml\" --now --timeout 1s || true"
         done
     }
 
