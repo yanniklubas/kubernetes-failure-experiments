@@ -112,7 +112,7 @@ get_pod_and_container_ids() {
     log_info "Fetching pod names, pod UIDs, and container IDs..."
     local output
 
-    if output=$(log_command "kubectl get pods -o custom-columns=Name:.metadata.name,PodID:.metadata.uid,ContainerID:.status.containerStatuses[*].containerID"); then
+    if output=$(kubectl get pods -o custom-columns=Name:.metadata.name,PodID:.metadata.uid,ContainerID:.status.containerStatuses[*].containerID); then
         echo "$output" | sed 's/containerd:\/\///g'
     else
         log_error "Failed to retrieve pod and container IDs."
@@ -483,8 +483,8 @@ start_robot_shop() {
     log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\""
 
     log_info "Cleaning up persistent volumes..."
-    log_command "kubectl delete pvc --all"
     log_command "kubectl delete pv --all"
+    log_command "kubectl delete pvc --all"
 
     log_info "Applying local storage class..."
     log_command "kubectl apply -f \"$repo_dir/K8s/local-storage-class.yml\""
@@ -905,7 +905,7 @@ main() {
         save_config
 
         log_info "Saving initial schedule..."
-        kubectl get pods -o wide >"$OUTPUT_DIR/schedule.log"
+        log_command "kubectl get pods -o wide >\"$OUTPUT_DIR/schedule.log\""
         log_info "Saved initial_schedule"
 
         get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.log"
