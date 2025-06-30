@@ -522,8 +522,8 @@ start_robot_shop() {
     fi
 
     log_info "Deploying Redis..."
-    log_command "kubectl apply -f \"$prefix/redis-statefulset.yaml\"" || true
-    log_command "kubectl apply -f \"$prefix/redis-service.yaml\"" || true
+    log_command "kubectl apply -f \"$prefix/redis-statefulset.yaml\""
+    log_command "kubectl apply -f \"$prefix/redis-service.yaml\""
 
     log_info "Deploying infrastructure services..."
     apply_services "${infra_services[@]}"
