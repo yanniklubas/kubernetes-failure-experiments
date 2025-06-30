@@ -458,6 +458,7 @@ start_robot_shop() {
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
 
         log_info "Waiting for all pods to terminate..."
+        log_command helm uninstall rabbitmq-operator
         log_command "kubectl wait --for=delete pod --all --timeout -1s"
     fi
 
