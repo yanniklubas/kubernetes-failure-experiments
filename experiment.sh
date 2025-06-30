@@ -246,8 +246,15 @@ log_debug() { [[ "$LOG_LEVEL" == "DEBUG" ]] && _log "DEBUG" "$COLOR_DEBUG" "$@";
 log_command() {
     # Detect if any shell metacharacters exist
     local cmd="$*"
+    local tmp
+    tmp=$(mktemp)
     log_debug "Running: $*"
-    bash -c "$cmd" >/dev/null 2>&1
+    if ! bash -c "$cmd" >"$tmp" 2>&1; then
+        log_error "Failed to execute $cmd"
+        cat "$tmp"
+        rm -f "$tmp"
+        return 1
+    fi
 }
 
 save_config() {
