@@ -476,9 +476,9 @@ start_robot_shop() {
         delete_services "${infra_services[@]}"
         delete_services "${app_services[@]}"
 
-        log_command "kubectl delete pod rabbitmq-server-0 --now || true"
         log_command "kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json \
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
+        log_command "kubectl delete pod rabbitmq-server-0 --now || true"
 
         log_info "Waiting for all pods to terminate..."
         wait_for_deleted_services "${app_services[@]}"
