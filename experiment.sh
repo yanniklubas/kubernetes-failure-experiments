@@ -337,7 +337,7 @@ install_chaos_mesh() {
     log_info "Adding Chaos Mesh Helm repo..."
     log_command "helm repo add chaos-mesh https://charts.chaos-mesh.org"
     log_info "Creating namespace '${namespace}' if it doesn't exist..."
-    log_command "kubectl create namespace \"$namespace\" --dry-run=client -o yaml | kubectl apply -f"
+    log_command "kubectl create namespace \"$namespace\" --dry-run=client -o yaml | kubectl apply -f -"
 
     log_info "Installing Chaos Mesh into namespace '${namespace}'..."
     log_command "helm install chaos-mesh chaos-mesh/chaos-mesh \
