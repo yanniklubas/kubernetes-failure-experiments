@@ -329,7 +329,7 @@ install_chaos_mesh() {
 
     # Skip installation if already installed
     log_info "Checking if Chaos Mesh is already installed..."
-    if helm list --namespace "$namespace" | grep "^chaos-mesh"; then
+    if helm list --namespace "$namespace" | grep "^chaos-mesh" >/dev/null 2>&1; then
         log_info "Chaos Mesh is already installed. Skipping installation."
         return
     fi
@@ -860,7 +860,7 @@ main() {
 
         if [ "$EXPERIMENT_MODE" = "pod" ]; then
             install_chaos_mesh
-            kubectl delete podchaos --all || true
+            log_command kubectl delete podchaos --all || true
         elif [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
             log_autoscaler_events &
