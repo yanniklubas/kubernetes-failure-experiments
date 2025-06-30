@@ -238,11 +238,27 @@ _log() {
         "$COLOR_RESET" >&2
 }
 
-log_info() { [[ "$LOG_LEVEL" =~ ^(INFO|DEBUG)$ ]] && _log "INFO" "$COLOR_INFO" "$@"; }
-log_warn() { [[ "$LOG_LEVEL" =~ ^(INFO|WARN|DEBUG)$ ]] && _log "WARN" "$COLOR_WARN" "$@"; }
+log_info() {
+    if [[ "$LOG_LEVEL" =~ ^(INFO|DEBUG)$ ]]; then
+        _log "INFO" "$COLOR_INFO" "$@"
+    fi
+}
+log_warn() {
+    if [[ "$LOG_LEVEL" =~ ^(INFO|WARN|DEBUG)$ ]]; then
+        _log "WARN" "$COLOR_WARN" "$@"
+    fi
+}
 log_error() { _log "ERROR" "$COLOR_ERROR" "$@"; }
-log_success() { [[ "$LOG_LEVEL" =~ ^(INFO|DEBUG)$ ]] && _log "SUCCESS" "$COLOR_SUCCESS" "$@"; }
-log_debug() { [[ "$LOG_LEVEL" == "DEBUG" ]] && _log "DEBUG" "$COLOR_DEBUG" "$@"; }
+log_success() {
+    if [[ "$LOG_LEVEL" =~ ^(INFO|DEBUG)$ ]]; then
+        _log "SUCCESS" "$COLOR_SUCCESS" "$@"
+    fi
+}
+log_debug() {
+    if [[ "$LOG_LEVEL" == "DEBUG" ]]; then
+        _log "DEBUG" "$COLOR_DEBUG" "$@"
+    fi
+}
 log_command() {
     # Detect if any shell metacharacters exist
     local cmd="$*"
@@ -479,6 +495,7 @@ start_robot_shop() {
         log_command "kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json \
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
         log_command "kubectl delete pod rabbitmq-server-0 --now || true"
+        log_command helm uninstall rabbitmq-operator
 
         log_info "Waiting for all pods to terminate..."
         wait_for_deleted_services "${app_services[@]}"
