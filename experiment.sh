@@ -469,7 +469,7 @@ start_robot_shop() {
         delete_services "${infra_services[@]}"
         delete_services "${app_services[@]}"
 
-        log_command "kubectl delete pod rabbitmq-server-0 --wait || true"
+        log_command "kubectl delete pod rabbitmq-server-0 --now || true"
         log_command "kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json \
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
 
@@ -483,8 +483,8 @@ start_robot_shop() {
     log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\""
 
     log_info "Cleaning up persistent volumes..."
-    log_command "kubectl delete pv --all"
     log_command "kubectl delete pvc --all"
+    log_command "kubectl delete pv --all"
 
     log_info "Applying local storage class..."
     log_command "kubectl apply -f \"$repo_dir/K8s/local-storage-class.yml\""
@@ -522,8 +522,8 @@ start_robot_shop() {
     fi
 
     log_info "Deploying Redis..."
-    log_command "kubectl apply -f \"$prefix/redis-statefulset.yaml\""
-    log_command "kubectl apply -f \"$prefix/redis-service.yaml\""
+    log_command "kubectl apply -f \"$prefix/redis-statefulset.yaml\"" || true
+    log_command "kubectl apply -f \"$prefix/redis-service.yaml\"" || true
 
     log_info "Deploying infrastructure services..."
     apply_services "${infra_services[@]}"
