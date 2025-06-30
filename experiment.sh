@@ -474,10 +474,35 @@ start_robot_shop() {
 
     export -f __exec_remote_commands
     export -f setup_storage
+    export -f log_info
+    export COLOR_INFO
+    export -f log_debug
+    export COLOR_DEBUG
+    export -f log_error
+    export COLOR_ERROR
+    export -f log_success
+    export COLOR_SUCCESS
+    export COLOR_RESET
+    export LOG_TIMESTAMP
+    export LOG_LEVEL
+    export -f log_command
+    export -f _log
+    export -f _log_ts
 
     log_info "Setting up storage on all nodes..."
     kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers |
         xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
+
+    log_info "Checking if RabbitMQOperator is already installed..."
+    if helm list --namespace default | grep "^rabbitmq-operator"; then
+        log_info "RabbitMQOperator is already installed. Skipping installation."
+    else
+        log_info "Did not find a RabbitMQOperator installation."
+        log_info "Adding RabbitMQOperator Helm repo..."
+        log_command helm repo add rabbitmq https://charts.bitnami.com/bitnami
+        log_info "Installing RabbitMQOperator..."
+        helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
+    fi
 
     log_info "Deploying Redis..."
     log_command "kubectl apply -f \"$prefix/redis-statefulset.yaml\""
