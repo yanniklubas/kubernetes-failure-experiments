@@ -509,7 +509,7 @@ measure_node_latencies() {
     log_command kubectl wait -n "$namespace" --for=condition=Ready pod -l "$label" --timeout -1s
     log_info "Netperf daemonsets are ready"
 
-    log_command kubectl get pods -n "$namespace" -l "$label" -o=jsonpath='\'{range .items[*]}{"{\"podName\":\""}{.metadata.name}{"\",\"podIP\":\""}{.status.podIP}{"\",\"nodeName\":\""}{.spec.nodeName}{"\",\"nodeIP\":\""}{.status.hostIP}{"\"}\n"}{end}\'' ">\"$log_file\""
+    log_command kubectl get pods -n "$namespace" -l "$label" -o=jsonpath=''\''{range .items[*]}{"{\"podName\":\""}{.metadata.name}{"\",\"podIP\":\""}{.status.podIP}{"\",\"nodeName\":\""}{.spec.nodeName}{"\",\"nodeIP\":\""}{.status.hostIP}{"\"}\n"}{end}'\''' ">\"$log_file\""
 
     mapfile -t PODS < <(kubectl get pods -n "$namespace" -l "$label" -o jsonpath="{range .items[*]}{.metadata.name} {.status.podIP}{'\n'}{end}")
 
