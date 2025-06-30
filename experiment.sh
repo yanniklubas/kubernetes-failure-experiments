@@ -569,7 +569,7 @@ EOF
     done
 
     # Remove trailing comma from last JSON object
-    log_command sed -i '$ s/},/}/' "$tmp_file"
+    log_command sed -i "'\$ s/},/}/'" "$tmp_file"
     echo "]" >>"$tmp_file"
     log_command mv "$tmp_file" "$output_file"
 
