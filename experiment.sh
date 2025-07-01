@@ -61,7 +61,7 @@ __exec_remote_commands() {
 
     log_debug "Remote command string: $cmds"
 
-    log_command gcloud compute ssh "$user@$ip" --command="$cmds" || {
+    gcloud compute ssh "$user@$ip" --command="$cmds" || {
         log_error "Remote commands execution failed on $user@$ip"
         return 1
     }
