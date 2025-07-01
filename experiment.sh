@@ -971,7 +971,7 @@ main() {
   ($status.conditions[] | select(.type == "Ready") | .lastTransitionTime | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $ready |
   "ready_duration_secs: \($ready - $start)"
 ' >"$OUTPUT_DIR/ready_duration.yml"
-            kubectl delete podchaos --all
+            log_command kubectl delete podchaos --all
         fi
 
         kill_background_jobs
