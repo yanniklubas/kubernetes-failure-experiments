@@ -61,7 +61,7 @@ __exec_remote_commands() {
 
     log_debug "Remote command string: $cmds"
 
-    gcloud compute ssh "$user@$ip" --command="$cmds" || {
+    log_command gcloud compute ssh "$user@$ip" --command="$cmds" || {
         log_error "Remote commands execution failed on $user@$ip"
         return 1
     }
@@ -112,7 +112,9 @@ get_pod_and_container_ids() {
     log_info "Fetching pod names, pod UIDs, and container IDs..."
     local output
 
-    if output=$(kubectl get pods -o custom-columns=Name:.metadata.name,PodID:.metadata.uid,ContainerID:.status.containerStatuses[*].containerID); then
+    if output=$(
+        kubectl get pods -o json | jq '[.items[] | {name: .metadata.name, pod_id: .metadata.uid, container_ids: [.status.containerStatuses[].containerID]}]'
+    ); then
         echo "$output" | sed 's/containerd:\/\///g'
     else
         log_error "Failed to retrieve pod and container IDs."
@@ -267,7 +269,7 @@ log_command() {
     log_debug "Running: $*"
     if ! bash -c "$cmd" >"$tmp" 2>&1; then
         log_error "Failed to execute $cmd"
-        cat "$tmp"
+        log_error "$(cat "$tmp")"
         rm -f "$tmp"
         return 1
     fi
@@ -495,7 +497,9 @@ start_robot_shop() {
         log_command "kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq --type json \
             --patch='[ { \"op\": \"remove\", \"path\": \"/metadata/finalizers\" } ]' || true"
         log_command "kubectl delete pod rabbitmq-server-0 --now || true"
-        log_command helm uninstall rabbitmq-operator
+        if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
+            log_command helm uninstall rabbitmq-operator
+        fi
 
         log_info "Waiting for all pods to terminate..."
         wait_for_deleted_services "${app_services[@]}"
@@ -542,7 +546,7 @@ start_robot_shop() {
         xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
 
     log_info "Checking if RabbitMQOperator is already installed..."
-    if helm list --namespace default | grep "^rabbitmq-operator"; then
+    if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
         log_info "RabbitMQOperator is already installed. Skipping installation."
     else
         log_info "Did not find a RabbitMQOperator installation."
@@ -939,7 +943,7 @@ main() {
         log_command "kubectl get pods -o wide >\"$OUTPUT_DIR/schedule.log\""
         log_info "Saved initial_schedule"
 
-        get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.log"
+        get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.json"
 
         start_loadgenerator
 
@@ -957,6 +961,8 @@ main() {
         esac
 
         attach_to_docker_container
+
+        get_pod_and_container_ids >"$OUTPUT_DIR/ids_end.json"
 
         local end_ts
         end_ts=$(now)
