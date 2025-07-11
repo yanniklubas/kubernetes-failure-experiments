@@ -285,10 +285,13 @@ save_config() {
         log_error "failed to get nodes info."
         return 1
     fi
+    local duration
+    duration=$(wc -l "$PROFILE" | awk '{print $1}')
 
     log_info "Writing experiment configuration to '$out'..."
     {
         printf "profile: %s\n" "$PROFILE"
+        printf "duration_secs: %d\n" "$duration"
         printf "timeout: %s\n" "$TIMEOUT"
         printf "virtual_users: %s\n" "$VIRTUAL_USERS"
         printf "warmup_duration: %s\n" "$WARMUP_DURATION"
