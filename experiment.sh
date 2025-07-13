@@ -515,11 +515,11 @@ start_robot_shop() {
 
     log_info "Cleaning up persistent volumes..."
     for pvc in $(kubectl get pvc -n default -o jsonpath='{.items[*].metadata.name}'); do
-        log_command kubectl patch pvc "$pvc" -n default -p '{"metadata":{"finalizers":[]}}' --type=merge
+        log_command kubectl patch pvc "$pvc" -n default -p ''\''{"metadata":{"finalizers":[]}}'\''' --type=merge
     done
     log_command "kubectl delete pvc --all"
     for pv in $(kubectl get pv -o jsonpath='{.items[*].metadata.name}'); do
-        log_command kubectl patch pv "$pv" -p '{"metadata":{"finalizers":[]}}' --type=merge
+        log_command kubectl patch pv "$pv" -p ''\''{"metadata":{"finalizers":[]}}'\''' --type=merge
     done
 
     log_command "kubectl delete pv --all"
