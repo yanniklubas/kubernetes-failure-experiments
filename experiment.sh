@@ -573,6 +573,13 @@ start_robot_shop() {
     wait_for_services_ready "${app_services[@]}"
     wait_for_services_ready "${infra_services[@]}"
 
+    if [[ "$EXPERIMENT_MODE" == "node" ]]; then
+        local replicas=2
+        log_info "Scaling web deployment to $replicas replicas"
+        log_command "kubectl scale deployment -l service=web --replicas=$replicas"
+        wait_for_services_ready "web"
+    fi
+
     log_success "Robot Shop is up and running!"
 }
 
