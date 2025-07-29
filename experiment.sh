@@ -509,6 +509,8 @@ start_robot_shop() {
         wait_for_deleted_services "${infra_services[@]}"
     fi
 
+    log_command kubectl delete deployments,statefulsets,services --all --namespace=default
+
     log_info "Generating Helm manifests for Robot Shop..."
     mkdir -p "$yamls_dir"
     log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\""
@@ -550,7 +552,8 @@ start_robot_shop() {
 
     log_info "Checking if RabbitMQOperator is already installed..."
     if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
-        log_info "RabbitMQOperator is already installed. Skipping installation."
+        log_command helm uninstall rabbitmq-operator
+        log_command helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
     else
         log_info "Did not find a RabbitMQOperator installation."
         log_info "Adding RabbitMQOperator Helm repo..."
@@ -800,7 +803,7 @@ inject_node_failure() {
     fi
 
     log_info "Injecting node failure on instance '$NODE_FAILURE_INSTANCE'..."
-    if log_command gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" --command="sudo poweroff --force"; then
+    if log_command gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" '--command="sudo poweroff --force"'; then
         log_success "Node failure injected successfully on '$NODE_FAILURE_INSTANCE'."
     else
         log_error "Failed to inject node failure on '$NODE_FAILURE_INSTANCE'."
