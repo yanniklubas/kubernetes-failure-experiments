@@ -517,12 +517,12 @@ start_robot_shop() {
     for pvc in $(kubectl get pvc -n default -o jsonpath='{.items[*].metadata.name}'); do
         log_command kubectl patch pvc "$pvc" -n default -p ''\''{"metadata":{"finalizers":[]}}'\''' --type=merge
     done
-    log_command "kubectl delete pvc --all"
+    log_command "kubectl delete pvc --all --grace-period=0 --force"
     for pv in $(kubectl get pv -o jsonpath='{.items[*].metadata.name}'); do
         log_command kubectl patch pv "$pv" -p ''\''{"metadata":{"finalizers":[]}}'\''' --type=merge
     done
 
-    log_command "kubectl delete pv --all"
+    log_command "kubectl delete pv --all --grace-period=0 --force"
 
     log_info "Applying local storage class..."
     log_command "kubectl apply -f \"$repo_dir/K8s/local-storage-class.yml\""
