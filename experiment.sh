@@ -147,7 +147,7 @@ now() {
     date "+%s"
 }
 
-setup_autoscaling() {
+setup_autoscaling_realistic() {
     find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;
 
     # Setup minimum and maximum node counts for 'small pool'
@@ -172,7 +172,27 @@ setup_autoscaling() {
         --quiet
 }
 
-cleanup_autoscaling() {
+setup_autoscaling_node_failure() {
+    find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;
+
+    gcloud container clusters update "$CLUSTER" \
+        --enable-autoscaling \
+        --min-nodes=1 \
+        --max-nodes=5 \
+        --node-pool="$SMALL_POOL" \
+        --zone="$ZONE" \
+        --quiet
+
+    gcloud container clusters update "$CLUSTER" \
+        --enable-autoscaling \
+        --min-nodes=1 \
+        --max-nodes=5 \
+        --node-pool="$LARGE_POOL" \
+        --zone="$ZONE" \
+        --quiet
+}
+
+cleanup_autoscaling_realistic() {
     find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;
     gcloud container clusters update "$CLUSTER" \
         --no-enable-autoscaling \
@@ -202,6 +222,20 @@ cleanup_autoscaling() {
         --shielded-integrity-monitoring \
         --no-shielded-secure-boot \
         --node-locations "$ZONE"
+}
+
+cleanup_autoscaling_node_failure() {
+    find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;
+    gcloud container clusters update "$CLUSTER" \
+        --no-enable-autoscaling \
+        --node-pool="$SMALL_POOL" \
+        --zone="$ZONE" \
+        --quiet
+    gcloud container clusters update "$CLUSTER" \
+        --no-enable-autoscaling \
+        --node-pool="$LARGE_POOL" \
+        --zone="$ZONE" \
+        --quiet
 }
 
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
@@ -947,11 +981,11 @@ main() {
             install_chaos_mesh
             log_command kubectl delete podchaos --all || true
         elif [ "$EXPERIMENT_MODE" = "real" ]; then
-            setup_autoscaling
+            setup_autoscaling_realistic
             # log_autoscaler_events &
             # PIDS+=($!)
         elif [ "$EXPERIMENT_MODE" = "node" ]; then
-            setup_autoscaling
+            setup_autoscaling_node_failure
         else
             log_error "Invalid experiment mode: $EXPERIMENT_MODE"
             return 1
@@ -1014,7 +1048,10 @@ main() {
     done
 
     if [ "$EXPERIMENT_MODE" = "real" ]; then
-        cleanup_autoscaling
+        cleanup_autoscaling_realistic
+    fi
+    if [ "$EXPERIMENT_MODE" = "node" ]; then
+        cleanup_autoscaling_node_failure
     fi
 
     rm -r "$HOME/robot-yamls"
