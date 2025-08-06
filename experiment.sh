@@ -22,11 +22,11 @@ LARGE_POOL="large-pool"
 # NODE FAILURE CONFIGURATION
 select_node_failure_instance() {
     local instance
-    instance=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | shuf -n 1)
+    instance=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | grep large | head -n 1)
     echo "$instance"
 }
 NODE_FAILURE_INSTANCE=$(select_node_failure_instance)
-NODE_FAILURE_TIME=30
+NODE_FAILURE_TIME=120
 
 # POD FAILURE CONFIGURATION
 POD_FAILURE_NAME="catalogue"
@@ -34,14 +34,19 @@ POD_FAILURE_TIME=60
 
 # LOADGENERATOR CONFIGURATION
 LUA_FILE="$PWD/workloads/cart-add.lua"
-# LUA_FILE="$PWD/workloads/fullrobotshop-dynamicparameters.lua"
 PROFILE="$PWD/load/constant_12rps_3min.csv"
-# PROFILE = "$PWD/load/real-trace.csv"
 TIMEOUT=20000
 VIRTUAL_USERS=96
 WARMUP_DURATION=120
 WARMUP_RPS=3
 WARMUP_PAUSE=22
+if [[ "$EXPERIMENT_MODE" == "node" ]]; then
+    LUA_FILE="$PWD/workloads/node-failure.lua"
+    PROFILE="$PWD/load/constant_36rps_15min.csv"
+    VIRTUAL_USERS=360
+    TIMEOUT=10000
+    WARMUP_PAUSE=12
+fi
 
 PIDS=()
 __exec_remote_commands() {
@@ -513,8 +518,13 @@ start_robot_shop() {
 
     log_info "Generating Helm manifests for Robot Shop..."
     mkdir -p "$yamls_dir"
-    log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\""
+    local values_option=""
 
+    # Set tolerations for node failure experiments
+    if [[ "$EXPERIMENT_MODE" = "node" ]]; then
+        values_option=" --values $PWD/node_failure_values.yaml"
+    fi
+    log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\"$values_option"
     log_info "Cleaning up persistent volumes..."
     for pvc in $(kubectl get pvc -n default -o jsonpath='{.items[*].metadata.name}'); do
         log_command kubectl patch pvc "$pvc" -n default -p ''\''{"metadata":{"finalizers":[]}}'\''' --type=merge
@@ -576,6 +586,7 @@ start_robot_shop() {
     wait_for_services_ready "${app_services[@]}"
     wait_for_services_ready "${infra_services[@]}"
 
+    # Scale to 2 web instance replicas for node failure experiments
     if [[ "$EXPERIMENT_MODE" == "node" ]]; then
         local replicas=2
         log_info "Scaling web deployment to $replicas replicas"
@@ -936,9 +947,11 @@ main() {
             log_command kubectl delete podchaos --all || true
         elif [ "$EXPERIMENT_MODE" = "real" ]; then
             setup_autoscaling
-            log_autoscaler_events &
-            PIDS+=($!)
-        elif [ "$EXPERIMENT_MODE" != "node" ]; then
+            # log_autoscaler_events &
+            # PIDS+=($!)
+        elif [ "$EXPERIMENT_MODE" = "node" ]; then
+            setup_autoscaling
+        else
             log_error "Invalid experiment mode: $EXPERIMENT_MODE"
             return 1
         fi
