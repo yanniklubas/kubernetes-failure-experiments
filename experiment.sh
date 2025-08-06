@@ -969,7 +969,7 @@ main() {
         log_command "kubectl get pods -o wide >\"$OUTPUT_DIR/schedule.log\""
         log_info "Saved initial_schedule"
 
-        get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.json"
+        # get_pod_and_container_ids >"$OUTPUT_DIR/ids_start.json"
 
         start_loadgenerator
 
@@ -988,7 +988,7 @@ main() {
 
         attach_to_docker_container
 
-        get_pod_and_container_ids >"$OUTPUT_DIR/ids_end.json"
+        # get_pod_and_container_ids >"$OUTPUT_DIR/ids_end.json"
 
         local end_ts
         end_ts=$(now)
