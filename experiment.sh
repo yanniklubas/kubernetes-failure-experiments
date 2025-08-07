@@ -146,7 +146,7 @@ now() {
 }
 
 setup_autoscaling_realistic() {
-    log_command log_command find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;
+    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;'
 
     # Setup minimum and maximum node counts for 'small pool'
     log_command gcloud container clusters update "$CLUSTER" \
@@ -171,7 +171,7 @@ setup_autoscaling_realistic() {
 }
 
 setup_autoscaling_node_failure() {
-    log_command find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;
+    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;'
 
     log_command gcloud container clusters update "$CLUSTER" \
         --enable-autoscaling \
@@ -191,7 +191,7 @@ setup_autoscaling_node_failure() {
 }
 
 cleanup_autoscaling_realistic() {
-    log_command find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;
+    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;'
     log_command gcloud container clusters update "$CLUSTER" \
         --no-enable-autoscaling \
         --node-pool="$SMALL_POOL" \
@@ -223,7 +223,7 @@ cleanup_autoscaling_realistic() {
 }
 
 cleanup_autoscaling_node_failure() {
-    log_command find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;
+    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;'
     log_command gcloud container clusters update "$CLUSTER" \
         --no-enable-autoscaling \
         --node-pool="$SMALL_POOL" \
