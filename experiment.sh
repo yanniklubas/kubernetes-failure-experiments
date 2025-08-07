@@ -236,6 +236,19 @@ cleanup_autoscaling_node_failure() {
         --quiet
 }
 
+reset_cluster_state() {
+    log_command gcloud container clusters resize "$CLUSTER" \
+        --node-pool="$SMALL_POOL" \
+        --num-nodes=1 \
+        --zone="$ZONE" \
+        --quiet
+    log_command gcloud container clusters resize "$CLUSTER" \
+        --node-pool="$LARGE_POOL" \
+        --num-nodes=1 \
+        --zone="$ZONE" \
+        --quiet
+}
+
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
 LOG_TIMESTAMP=true
 
@@ -972,6 +985,9 @@ main() {
 
         kill_background_jobs
         measure_node_latencies "end"
+        if [ "$EXPERIMENT_MODE" = "node" ]; then
+            reset_cluster_state
+        fi
 
         log_success "Experiment iteration $i finished"
     done
