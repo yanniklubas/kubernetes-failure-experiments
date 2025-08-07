@@ -791,7 +791,7 @@ inject_node_failure() {
     fi
 
     log_info "Injecting node failure on instance '$NODE_FAILURE_INSTANCE'..."
-    if log_command gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" '--command="sudo poweroff --force"'; then
+    if gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" '--command="sudo poweroff --force"'; then
         log_success "Node failure injected successfully on '$NODE_FAILURE_INSTANCE'."
     else
         log_error "Failed to inject node failure on '$NODE_FAILURE_INSTANCE'."
