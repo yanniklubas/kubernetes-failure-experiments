@@ -3,8 +3,6 @@ set -eou pipefail
 
 # GENERAL CONFIGURATION
 EMAIL="mygcloud@email.com"
-LOCAL_STORAGE_YAML="robot-local-storage.yml"
-STANDARD_STORAGE_YAML="robot-standard-storage.yml"
 EXPERIMENT_MODE="pod" # "node" or "pod" or "real"
 EXPERIMENT_NAME="pod-failure-without-retry"
 if [ "$EXPERIMENT_MODE" = "real" ]; then
@@ -430,54 +428,6 @@ install_chaos_mesh() {
     log_info "Chaos Mesh installation completed."
 }
 
-setup_storage() {
-    local node="$1"
-
-    log_info "Setting up storage directories on node '$node'..."
-    local remote_cmds=(
-        "mkdir -p /home/$USER/robot-local"
-        "mkdir -p /home/$USER/robot-standard"
-    )
-    __exec_remote_commands "$USER" "$node" "${remote_cmds[@]}"
-
-    render_yaml() {
-        local template_path="$1"
-        local output
-        output=$(mktemp)
-
-        if [[ ! -f "$template_path" ]]; then
-            log_error "Template not found: $template_path"
-            exit 1
-        fi
-
-        log_command "sed -e \"s/REPLACE_HOSTNAME/$node/g\" \
-            -e \"s/REPLACE_USER/$USER/g\" \
-            -e \"s/REPLACE_NODE/$node/g\" \
-            \"$template_path\" >\"$output\""
-
-        echo "$output"
-    }
-
-    local local_template="$HOME/robot-shop/K8s/$LOCAL_STORAGE_YAML"
-    local standard_template="$HOME/robot-shop/K8s/$STANDARD_STORAGE_YAML"
-
-    log_debug "Rendering local storage YAML for node '$node'..."
-    local local_yaml
-    local_yaml=$(render_yaml "$local_template")
-
-    log_debug "Rendering standard storage YAML for node '$node'..."
-    local standard_yaml
-    standard_yaml=$(render_yaml "$standard_template")
-
-    log_info "Applying storage manifests for node '$node'..."
-    if log_command "kubectl apply -f \"$local_yaml\" -f \"$standard_yaml\""; then
-        log_success "Storage setup applied for node '$node'."
-    else
-        log_error "Failed to apply storage manifests for node '$node'."
-    fi
-    rm -f "$local_yaml" "$standard_yaml"
-}
-
 start_robot_shop() {
     local repo_dir="$HOME/robot-shop"
     local yamls_dir="$HOME/robot-yamls"
@@ -573,27 +523,6 @@ start_robot_shop() {
 
     log_info "Applying local storage class..."
     log_command "kubectl apply -f \"$repo_dir/K8s/local-storage-class.yml\""
-
-    export -f __exec_remote_commands
-    export -f setup_storage
-    export -f log_info
-    export COLOR_INFO
-    export -f log_debug
-    export COLOR_DEBUG
-    export -f log_error
-    export COLOR_ERROR
-    export -f log_success
-    export COLOR_SUCCESS
-    export COLOR_RESET
-    export LOG_TIMESTAMP
-    export LOG_LEVEL
-    export -f log_command
-    export -f _log
-    export -f _log_ts
-
-    log_info "Setting up storage on all nodes..."
-    kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers |
-        xargs -I {} bash -c 'LOCAL_STORAGE_YAML='"$LOCAL_STORAGE_YAML"' STANDARD_STORAGE_YAML='"$STANDARD_STORAGE_YAML"' setup_storage "$@"' _ {}
 
     log_info "Checking if RabbitMQOperator is already installed..."
     if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
