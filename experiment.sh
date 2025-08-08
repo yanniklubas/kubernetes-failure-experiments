@@ -222,7 +222,6 @@ cleanup_autoscaling_realistic() {
 }
 
 cleanup_autoscaling_node_failure() {
-    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl delete -f {} \;'
     log_command gcloud container clusters update "$CLUSTER" \
         --no-enable-autoscaling \
         --node-pool="$SMALL_POOL" \
