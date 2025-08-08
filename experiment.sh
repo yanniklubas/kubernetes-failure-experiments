@@ -171,7 +171,6 @@ setup_autoscaling_realistic() {
 }
 
 setup_autoscaling_node_failure() {
-    log_command 'find "$HOME/robot-shop/K8s" -type f -name "autoscaler*.yaml" -exec kubectl apply -f {} \;'
 
     log_command gcloud container clusters update "$CLUSTER" \
         --enable-autoscaling \
