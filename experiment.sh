@@ -879,16 +879,6 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 ' >"$OUTPUT_DIR/scheduling_events.json"
 }
 
-log_autoscaler_events() {
-    start_time=$(date -u +%s) && kubectl get events --all-namespaces --watch --field-selector involvedObject.name=cluster-autoscaler -o json | jq --unbuffered --argjson start_time "$start_time" '
-select(.lastTimestamp != null or .eventTime != null) |
-.timestamp = (.lastTimestamp // .eventTime) |
-.clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
-select((.clean_timestamp | fromdateiso8601) > $start_time) |
-{namespace: .metadata.namespace, pod: .involvedObject.name, reason: .reason, message: .message, time: .timestamp}
-' >"$OUTPUT_DIR/autoscaling_events.json"
-}
-
 log_node_events() {
     log_info "Starting to log node events to node_events.json..."
     local start_time
