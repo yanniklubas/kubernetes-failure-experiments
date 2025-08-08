@@ -31,7 +31,7 @@ function onCall(callnum)
 		return BASE_URL
 	elseif callnum == 2 then
 		local userId = math.random(100)
-		return BASE_URL .. PREFIX_PATH .. userId .. SUFFIX_PATH
+		return BASE_URL .. CART_PREFIX_PATH .. userId .. CART_SUFFIX_PATH
 	elseif callnum == 3 then
 		local rating = math.random(5)
 		return PUT_PREFIX .. BASE_URL .. RATINGS_PREFIX_PATH .. RATINGS_PRODUCT .. rating
