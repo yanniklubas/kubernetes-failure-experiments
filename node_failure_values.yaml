@@ -106,11 +106,11 @@ web:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
-          matchExpressions:
-            - key: service
-              operator: In
-              values:
-                - web
+            matchExpressions:
+              - key: service
+                operator: In
+                values:
+                  - web
           topologyKey: "kubernetes.io/hostname"
   tolerations:
     - key: "node.kubernetes.io/not-ready"
