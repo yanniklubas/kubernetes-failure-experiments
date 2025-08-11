@@ -37,31 +37,31 @@ cart:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 catalogue:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 dispatch:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 mongodb:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 mysql:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 payment:
   # Alternative payment gateway URL
   # Default is https://www.paypal.com
@@ -73,14 +73,14 @@ payment:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 rabbitmq: {}
 ratings:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 redis:
   # Storage class to use with redis statefulset.
   storageClassName: standard
@@ -88,25 +88,35 @@ redis:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 shipping:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 user:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 web:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+          matchExpressions:
+            - key: service
+              operator: In
+              values:
+                - web
+          topologyKey: "kubernetes.io/hostname"
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
-      tolerationSeconds: 0
+      tolerationSeconds: 1
 instana:
   agent:
     # {instan-svc}.{namespace}
