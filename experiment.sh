@@ -633,6 +633,10 @@ measure_node_latencies() {
             fi
 
             IFS=',' read -r -a LATENCIES <<<"${result##*$'\n'}"
+            if [[ ${#LATENCIES[@]} -ne 7 ]]; then
+                log_error "Unexpected netperf output from $SRC_POD to $DST_POD: $result"
+                continue
+            fi
 
             cat <<EOF >>"$tmp_file"
   {
