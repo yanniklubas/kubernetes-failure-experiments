@@ -33,6 +33,8 @@ ocCreateRoute: false
 #   tolerations: []
 ######################################
 cart:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: default-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
@@ -76,6 +78,8 @@ payment:
       tolerationSeconds: 1
 rabbitmq: {}
 ratings:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: default-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
