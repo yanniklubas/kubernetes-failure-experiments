@@ -975,6 +975,15 @@ main() {
             log_command kubectl delete podchaos --all
         fi
 
+        if [ "$EXPERIMENT_MODE" = "node" ]; then
+            local pod
+            pod=$(kubectl get pod | grep "cart" | awk '{print $1}')
+
+            kubectl get logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/cart.log"
+            pod=$(kubectl get pod | grep "ratings" | awk '{print $1}')
+            kubectl get logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/ratings.log"
+        fi
+
         kill_background_jobs
         measure_node_latencies "end"
         if [ "$EXPERIMENT_MODE" = "node" ]; then
