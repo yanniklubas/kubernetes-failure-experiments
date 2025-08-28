@@ -979,9 +979,9 @@ main() {
             local pod
             pod=$(kubectl get pod | grep "cart" | awk '{print $1}')
 
-            kubectl get logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/cart.log"
+            kubectl logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/cart.log"
             pod=$(kubectl get pod | grep "ratings" | awk '{print $1}')
-            kubectl get logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/ratings.log"
+            kubectl logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/ratings.log"
         fi
 
         kill_background_jobs
