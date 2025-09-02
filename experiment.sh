@@ -480,6 +480,14 @@ start_robot_shop() {
         done
     }
 
+    scale_services() {
+        local replicas=3
+        for service in "$@"; do
+            log_info "Scaling service: $service to $replicas replicas"
+            log_command "kubectl scale --replicas=$replicas -f \"$prefix/$service-deployment.yaml\""
+        done
+    }
+
     wait_for_services_ready() {
         for service in "$@"; do
             log_debug "Waiting for service '$service' to be ready..."
@@ -567,6 +575,11 @@ start_robot_shop() {
         log_info "Scaling web deployment to $replicas replicas"
         log_command "kubectl scale deployment -l service=web --replicas=$replicas"
         wait_for_services_ready "web"
+    fi
+
+    if [[ "$EXPERIMENT_MODE" == "real" ]]; then
+        scale_services "${app_services[@]}"
+        wait_for_services_ready "${app_services[@]}"
     fi
 
     log_success "Robot Shop is up and running!"
