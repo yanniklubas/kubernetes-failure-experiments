@@ -45,6 +45,14 @@ if [[ "$EXPERIMENT_MODE" == "node" ]]; then
     TIMEOUT=10000
     WARMUP_PAUSE=12
 fi
+if [[ "$EXPERIMENT_MODE" == "real" ]]; then
+    LUA_FILE="$PWD/workloads/fullrobotshop-dynamicparameters.lua"
+    PROFILE="$PWD/load/real-trace.csv"
+    VIRTUAL_USERS=4800
+    TIMEOUT=10000
+    WARMUP_PAUSE=12
+    WARMUP_RPS=30
+fi
 
 PIDS=()
 __exec_remote_commands() {
