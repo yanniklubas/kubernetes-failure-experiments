@@ -48,7 +48,7 @@ fi
 if [[ "$EXPERIMENT_MODE" == "real" ]]; then
     LUA_FILE="$PWD/workloads/fullrobotshop-dynamicparameters.lua"
     PROFILE="$PWD/load/real-trace.csv"
-    VIRTUAL_USERS=4800
+    VIRTUAL_USERS=1500
     TIMEOUT=10000
     WARMUP_PAUSE=12
     WARMUP_RPS=30
