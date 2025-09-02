@@ -579,7 +579,7 @@ start_robot_shop() {
 
     if [[ "$EXPERIMENT_MODE" == "real" ]]; then
         scale_services "${app_services[@]}"
-        wait_for_services_ready "${app_services[@]}"
+        # wait_for_services_ready "${app_services[@]}"
     fi
 
     log_success "Robot Shop is up and running!"
