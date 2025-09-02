@@ -15,7 +15,7 @@ html = html
 --]]
 ---@diagnostic disable:lowercase-global
 function onCycle()
-	BASE_URL = "http://{{SERVER_IP}}/"
+	BASE_URL = "http://REPLACE_HOSTNAME:REPLACE_PORT/"
 end
 
 --[[
