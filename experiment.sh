@@ -111,12 +111,26 @@ save_container_stats() {
     log_debug "Queried Creo Monitor IP: $ip"
 
     log_info "Downloading container stats from $start to $end..."
-    if log_command "curl -sS 'http://$ip/export?from=$start&to=$end' -o '$OUTPUT_DIR/creo_cpu.json'"; then
-        log_success "Container stats saved to $OUTPUT_DIR/creo_cpu.json"
-    else
-        log_error "Failed to download container stats from Creo Monitor."
-        return 1
-    fi
+    local page=1
+    local has_next=true
+    while [[ "$has_next" = true ]]; do
+        local output_file="$OUTPUT_DIR/creo_cpu_page_$page.json"
+        if log_command "curl -sS 'http://$ip/export?from=$start&to=$end&page=$page' -o '$output_file'"; then
+            log_success "Container stats saved to $output_file"
+
+            has_next=$(jq -r '.hasNextPage' "$output_file" 2>/dev/null)
+            if [ $? -ne 0 ] || [ -z "$has_next" ] || [ "$has_next" = "null" ]; then
+                log_error "Failed to parse hasNextPage from response"
+                return 1
+            fi
+
+            log_info "Page $page hasNextPage: $has_next"
+            page=$((page + 1))
+        else
+            log_error "Failed to download container stats from Creo Monitor."
+            return 1
+        fi
+    done
 }
 
 get_pod_and_container_ids() {
