@@ -5,11 +5,6 @@ set -eou pipefail
 EMAIL="mygcloud@email.com"
 EXPERIMENT_MODE="pod" # "node" or "pod" or "real"
 EXPERIMENT_NAME="pod-failure-without-retry"
-if [ "$EXPERIMENT_MODE" = "real" ]; then
-    SERVER_IP=$(kubectl get nodes | grep default-pool | awk '{print $1}' | head -n 1)
-else
-    SERVER_IP=$(kubectl get nodes | grep large-pool | awk '{print $1}')
-fi
 
 GCLOUD_PROJECT="replacewithprojectid"
 CLUSTER="my-cluster"
@@ -378,7 +373,6 @@ save_config() {
         printf "warmup_duration: %s\n" "$WARMUP_DURATION"
         printf "warmup_rps: %s\n" "$WARMUP_RPS"
         printf "warmup_pause: %s\n" "$WARMUP_PAUSE"
-        printf "server: %s\n" "$SERVER_IP"
     } >"$out"
     case "$EXPERIMENT_MODE" in
     "node" | "region")
