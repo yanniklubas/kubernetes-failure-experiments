@@ -20,7 +20,11 @@ LARGE_POOL="large-pool"
 # NODE FAILURE CONFIGURATION
 select_node_failure_instance() {
     local instance
-    instance=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | grep large | head -n 1)
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        instance=$(kubectl get nodes -l topology.kubernetes.io/region=us,node-role=worker -o name | sed 's|node/||')
+    else
+        instance=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | grep large | head -n 1)
+    fi
     echo "$instance"
 }
 NODE_FAILURE_INSTANCE=$(select_node_failure_instance)
@@ -39,6 +43,13 @@ WARMUP_DURATION=120
 WARMUP_RPS=3
 WARMUP_PAUSE=22
 if [[ "$EXPERIMENT_MODE" == "node" ]]; then
+    LUA_FILE="$PWD/workloads/node-failure.lua"
+    PROFILE="$PWD/load/constant_36rps_15min.csv"
+    VIRTUAL_USERS=360
+    TIMEOUT=10000
+    WARMUP_PAUSE=12
+fi
+if [[ "$EXPERIMENT_MODE" == "region" ]]; then
     LUA_FILE="$PWD/workloads/node-failure.lua"
     PROFILE="$PWD/load/constant_36rps_15min.csv"
     VIRTUAL_USERS=360
@@ -370,7 +381,7 @@ save_config() {
         printf "server: %s\n" "$SERVER_IP"
     } >"$out"
     case "$EXPERIMENT_MODE" in
-    "node")
+    "node" | "region")
         {
             printf "failure_instance: %s\n" "$NODE_FAILURE_INSTANCE"
             printf "failure_time: %s\n" "$NODE_FAILURE_TIME"
@@ -549,6 +560,9 @@ start_robot_shop() {
     if [[ "$EXPERIMENT_MODE" = "node" ]]; then
         values_option=" --values $PWD/node_failure_values.yaml"
     fi
+    if [[ "$EXPERIMENT_MODE" = "region" ]]; then
+        values_option=" --values $PWD/node_failure_multi_region_values.yaml"
+    fi
     log_command "helm template robot-shop \"$repo_dir/K8s/helm\" --output-dir \"$yamls_dir\"$values_option"
 
     log_info "Cleaning up persistent volumes..."
@@ -604,6 +618,14 @@ start_robot_shop() {
         # wait_for_services_ready "${app_services[@]}"
     fi
 
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        local region="us"
+        for node in $(kubectl get nodes -l topology.kubernetes.io/region="$region",node-role=web -o name | sed 's|node/||'); do
+            for pod in $(kubectl get pods --field-selector spec.nodeName="$node" -o name); do
+                kubectl label "$pod" region="$region"
+            done
+        done
+    fi
     log_success "Robot Shop is up and running!"
 }
 
@@ -986,6 +1008,9 @@ main() {
             ;;
         "pod")
             inject_pod_failure "$start_ts" &
+            ;;
+        "region")
+            inject_node_failure "$start_ts" &
             ;;
         "real") ;;
         esac
