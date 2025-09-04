@@ -152,11 +152,6 @@ payment:
 rabbitmq:
   nodeSelector:
     node-role: worker
-  tolerations:
-    - key: "node.kubernetes.io/not-ready"
-      operator: "Exists"
-      effect: "NoExecute"
-      tolerationSeconds: 1
 ratings:
   nodeSelector:
     node-role: worker
