@@ -971,6 +971,8 @@ main() {
             # PIDS+=($!)
         elif [ "$EXPERIMENT_MODE" = "node" ]; then
             setup_autoscaling_node_failure
+        elif [ "$EXPERIMENT_MODE" = "region" ]; then
+            :
         else
             log_error "Invalid experiment mode: $EXPERIMENT_MODE"
             return 1
