@@ -130,7 +130,7 @@ save_container_stats() {
     local has_next=true
     while [[ "$has_next" = true ]]; do
         local output_file="$OUTPUT_DIR/creo_cpu_page_$page.json"
-        if log_command "curl -sS 'http://$ip/export?from=$start&to=$end&page=$page' -o '$output_file'"; then
+        if log_command "curl -sS 'http://$ip/export?from=$start&to=$end&page=$page&page_size=10000' -o '$output_file'"; then
             log_success "Container stats saved to $output_file"
 
             has_next=$(jq -r '.hasNextPage' "$output_file" 2>/dev/null)
