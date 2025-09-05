@@ -875,17 +875,28 @@ inject_node_failure() {
     fi
 
     log_info "Injecting node failure on instance '$NODE_FAILURE_INSTANCE'..."
-    if gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" --command="sudo poweroff --force"; then
+    if gcloud compute ssh "$USER@$NODE_FAILURE_INSTANCE" --command="nohup sudo poweroff --force > /dev/null 2>&1 &"; then
         log_success "Node failure injected successfully on '$NODE_FAILURE_INSTANCE'."
     else
         log_error "Failed to inject node failure on '$NODE_FAILURE_INSTANCE'."
     fi
     if [[ "$EXPERIMENT_MODE" == "region" ]]; then
         log_info "Waiting for instance '$NODE_FAILURE_INSTANCE' to fully stop..."
-        gcloud compute instances wait-until-stopped "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"
+        while true; do
+            local status
+            status=$(gcloud compute instances describe "$NODE_FAILURE_INSTANCE" \
+                --zone="$NODE_FAILURE_ZONE" \
+                --format="get(status)")
+            if [[ "$status" == "TERMINATED" ]]; then
+                log_info "Instance '$NODE_FAILURE_INSTANCE' is fully stopped."
+                break
+            fi
+            log_debug "Waiting for instance '$NODE_FAILURE_INSTANCE' to stop..."
+            sleep 1
+        done
 
         log_info "Starting instance '$NODE_FAILURE_INSTANCE' again..."
-        if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$ZONE"; then
+        if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"; then
             log_success "Node '$NODE_FAILURE_INSTANCE' started successfully."
         else
             log_error "Failed to start node '$NODE_FAILURE_INSTANCE'."
