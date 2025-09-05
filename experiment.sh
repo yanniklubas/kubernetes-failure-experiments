@@ -110,7 +110,15 @@ save_container_stats() {
 
     log_debug "Fetching Creo Monitor IP address..."
     local ip
-    ip=$(kubectl get service creo-monitor-svc -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        local ip_only
+        ip_only=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+        local port
+        port=$(kubectl get service creo-monitor-svc -n monitoring -o jsonpath='{.spec.ports[0].nodePort}')
+        ip="$ip_only:$port"
+    else
+        ip=$(kubectl get service creo-monitor-svc -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    fi
     if [[ -z "$ip" ]]; then
         log_error "Failed to retrieve Creo Monitor IP."
         return 1
@@ -734,6 +742,7 @@ get_web_ip_and_port() {
         for ((i = 0; i < "$max_tries"; i++)); do
             log_debug "Try #$i: fetching web service IP and port..."
 
+            # if gcloud compute ssh web-us --command="curl -s ifconfig.co" > "$stdout"; then > "$stdout"; then
             if kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
                 printf ":" >>"$stdout"
                 if kubectl get service web -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >>"$stdout"; then
