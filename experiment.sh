@@ -729,25 +729,51 @@ get_web_ip_and_port() {
     stdout=$(mktemp)
 
     log_info "Attempting to get web service IP and port (max tries: $max_tries)..."
-    for ((i = 0; i < "$max_tries"; i++)); do
-        log_debug "Try #$i: fetching web service IP and port..."
-        if kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[?(@.name=="http")].port}' >"$stdout"; then
-            local result
-            result=$(<"$stdout")
-            if [[ -n "$result" ]]; then
-                log_info "Successfully retrieved web IP and port: $result"
-                echo "$result"
-                rm -f "$stdout"
-                return 0
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        for ((i = 0; i < "$max_tries"; i++)); do
+            log_debug "Try #$i: fetching web service IP and port..."
+
+            if kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
+                printf ":" >>"$stdout"
+                if kubectl get service web -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >"$stdout"; then
+                    local result
+                    result=$(<"$stdout")
+                    if [[ -n "$result" ]]; then
+                        log_info "Successfully retrieved web IP and port: $result"
+                        echo "$result"
+                        rm -f "$stdout"
+                        return 0
+                    fi
+                else
+                    log_warn "Failed to fetch port on try #$i"
+                fi
             else
-                log_warn "Received empty IP and port on try #$i"
+                log_warn "Failed to fetch IP on try #$i"
             fi
-        else
-            log_warn "Failed to fetch IP and port on try #$i"
-        fi
-        sleep 1
-        truncate -s 0 "$stdout"
-    done
+            sleep 1
+            truncate -s 0 "$stdout"
+        done
+    else
+        for ((i = 0; i < "$max_tries"; i++)); do
+            log_debug "Try #$i: fetching web service IP and port..."
+            if kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[?(@.name=="http")].port}' >"$stdout"; then
+                local result
+                result=$(<"$stdout")
+                if [[ -n "$result" ]]; then
+                    log_info "Successfully retrieved web IP and port: $result"
+                    echo "$result"
+                    rm -f "$stdout"
+                    return 0
+                else
+                    log_warn "Received empty IP and port on try #$i"
+                fi
+            else
+                log_warn "Failed to fetch IP and port on try #$i"
+            fi
+            sleep 1
+            truncate -s 0 "$stdout"
+        done
+    fi
 
     log_error "Failed to get web service IP and port after $max_tries attempts."
     rm -f "$stdout"
