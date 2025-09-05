@@ -151,6 +151,15 @@ payment:
       effect: "NoExecute"
       tolerationSeconds: 1
 rabbitmq:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: topology.kubernetes.io/region
+                operator: NotIn
+                values:
+                  - us
   nodeSelector:
     node-role: worker
   tolerations:
