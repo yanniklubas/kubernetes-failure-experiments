@@ -586,16 +586,20 @@ start_robot_shop() {
         log_command "kubectl apply -f \"$repo_dir/K8s/standard-storage-class.yml\""
     fi
 
+    local rabbitmq_values_option=""
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        rabbitmq_values_option=" --values $PWD/rabbitmq_values.yaml"
+    fi
     log_info "Checking if RabbitMQOperator is already installed..."
     if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
         log_command helm uninstall rabbitmq-operator
-        log_command helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
+        log_command "helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6$rabbitmq_values_option"
     else
         log_info "Did not find a RabbitMQOperator installation."
         log_info "Adding RabbitMQOperator Helm repo..."
         log_command helm repo add rabbitmq https://charts.bitnami.com/bitnami
         log_info "Installing RabbitMQOperator..."
-        log_command helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6
+        log_command "helm install rabbitmq-operator rabbitmq/rabbitmq-cluster-operator --version 3.6.6$rabbitmq_values_option"
     fi
 
     log_info "Deploying Redis..."
