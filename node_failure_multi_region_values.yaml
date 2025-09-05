@@ -20,12 +20,12 @@ rootOnlyFilesystem: false
 psp:
   enabled: false
 # For the mini ones minikube, minishift set to true
-nodeport: false
+nodeport: true
 # "special" Openshift. Set to true when deploying to any openshift flavour
 openshift: false
 ocCreateRoute: false
 defaultReplicas: 4
-rabbitmqReplicas: 3
+rabbitmqReplicas: 1
 topologyAwareServices: true
 webRegion: us
 ######################################
