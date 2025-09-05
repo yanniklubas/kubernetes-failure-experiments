@@ -10,7 +10,7 @@ clusterOperator:
                 operator: NotIn
                 values:
                   - us
-msgToplogyOperator:
+msgTopologyOperator:
   nodeSelector:
     node-role: worker
   affinity:
