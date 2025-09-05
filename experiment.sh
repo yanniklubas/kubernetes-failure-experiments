@@ -48,6 +48,7 @@ if [[ "$EXPERIMENT_MODE" == "region" ]]; then
     LUA_FILE="$PWD/workloads/node-failure.lua"
     PROFILE="$PWD/load/constant_36rps_15min.csv"
     VIRTUAL_USERS=360
+    NODE_FAILURE_ZONE="us-central1-f"
     TIMEOUT=10000
     WARMUP_PAUSE=12
 fi
@@ -878,6 +879,17 @@ inject_node_failure() {
         log_success "Node failure injected successfully on '$NODE_FAILURE_INSTANCE'."
     else
         log_error "Failed to inject node failure on '$NODE_FAILURE_INSTANCE'."
+    fi
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        log_info "Waiting for instance '$NODE_FAILURE_INSTANCE' to fully stop..."
+        gcloud compute instances wait-until-stopped "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"
+
+        log_info "Starting instance '$NODE_FAILURE_INSTANCE' again..."
+        if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$ZONE"; then
+            log_success "Node '$NODE_FAILURE_INSTANCE' started successfully."
+        else
+            log_error "Failed to start node '$NODE_FAILURE_INSTANCE'."
+        fi
     fi
 }
 
