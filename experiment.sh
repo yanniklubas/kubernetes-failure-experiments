@@ -572,6 +572,10 @@ start_robot_shop() {
 
     log_info "Applying local storage class..."
     log_command "kubectl apply -f \"$repo_dir/K8s/local-storage-class.yml\""
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        log_info "Applying standard storage class..."
+        log_command "kubectl apply -f \"$repo_dir/K8s/standard-storage-class.yml\""
+    fi
 
     log_info "Checking if RabbitMQOperator is already installed..."
     if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
