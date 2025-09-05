@@ -26,6 +26,7 @@ openshift: false
 ocCreateRoute: false
 defaultReplicas: 4
 rabbitmqReplicas: 1
+redisReplicas: 3
 topologyAwareServices: true
 webRegion: us
 ######################################
@@ -200,6 +201,14 @@ redis:
                 values:
                   - redis
           topologyKey: "kubernetes.io/hostname"
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: topology.kubernetes.io/region
+                operator: NotIn
+                values:
+                  - us
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
