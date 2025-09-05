@@ -735,7 +735,7 @@ get_web_ip_and_port() {
 
             if kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
                 printf ":" >>"$stdout"
-                if kubectl get service web -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >"$stdout"; then
+                if kubectl get service web -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >>"$stdout"; then
                     local result
                     result=$(<"$stdout")
                     if [[ -n "$result" ]]; then
