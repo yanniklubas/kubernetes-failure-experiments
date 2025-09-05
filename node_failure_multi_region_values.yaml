@@ -25,6 +25,7 @@ nodeport: false
 openshift: false
 ocCreateRoute: false
 defaultReplicas: 4
+rabbitmqReplicas: 3
 topologyAwareServices: true
 webRegion: us
 ######################################
