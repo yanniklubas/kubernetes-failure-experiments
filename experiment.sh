@@ -1103,7 +1103,7 @@ main() {
 
             kubectl logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/cart.log" || true
             pod=$(kubectl get pod | grep "ratings" | awk '{print $1}')
-            kubectl logs "$pod" | grep "CircuitBreaker" >"$OUTPUT_DIR/ratings.log" || true
+            kubectl logs "$pod" | grep "CircuitBreaker:" >"$OUTPUT_DIR/ratings.log" || true
         fi
 
         kill_background_jobs
