@@ -1173,8 +1173,8 @@ main() {
         attach_to_docker_container
 
         if [ "$EXPERIMENT_MODE" = "region" ]; then
-            mv experiment-out/summary_out.csv "$OUTPUT_DIR/summary_out.csv"
-            mv experiment-out/request_out.csv "$OUTPUT_DIR/request_out.csv"
+            sudo mv experiment-out/summary_out.csv "$OUTPUT_DIR/summary_out.csv"
+            sudo mv experiment-out/request_out.csv "$OUTPUT_DIR/request_out.csv"
 
             REGIONS=("eu" "asia" "southamerica")
             local node
