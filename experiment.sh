@@ -810,14 +810,14 @@ get_web_ip_and_port_region() {
 
     for ((i = 0; i < "$max_tries"; i++)); do
 
-        if kubectl get nodes topology.kubernetes.io/region="$region",node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
+        if kubectl get nodes -l topology.kubernetes.io/region="$region",node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
             printf ":" >>"$stdout"
             local service_name
             case "$region" in
-            "us")
+            us)
                 service_name="web"
                 ;;
-            "*")
+            *)
                 service_name="web-$region"
                 ;;
             esac
