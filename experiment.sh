@@ -801,6 +801,41 @@ get_web_ip_and_port() {
     return 1
 }
 
+get_web_ip_and_port_region() {
+    local region
+    region="$1"
+    local max_tries=5
+    local stdout
+    stdout=$(mktemp)
+
+    for ((i = 0; i < "$max_tries"; i++)); do
+
+        if kubectl get nodes topology.kubernetes.io/region="$region",node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
+            printf ":" >>"$stdout"
+            local service_name
+            case "$region" in
+            "us")
+                service_name="web"
+                ;;
+            "*")
+                service_name="web-$region"
+                ;;
+            esac
+            if kubectl get service "$service_name" -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >>"$stdout"; then
+                local result
+                result=$(<"$stdout")
+                if [[ -n "$result" ]]; then
+                    echo "$result"
+                    rm -f "$stdout"
+                    return 0
+                fi
+            fi
+        fi
+        sleep 1
+        truncate -s 0 "$stdout"
+    done
+}
+
 start_loadgenerator() {
     log_info "Starting load_generator"
 
@@ -824,9 +859,13 @@ start_loadgenerator() {
                 ;;
             esac
 
-            gcloud compute ssh --zone "$zone" "$node" --command="cd kubernetes-failure-experiments; ./setup-loadgenerator.sh $region"
+            local ip_and_port
+            ip_and_port=$(get_web_ip_and_port_region "$region")
+
+            gcloud compute ssh --zone "$zone" "$node" --command="cd kubernetes-failure-experiments; ./setup-loadgenerator.sh $ip_and_port"
         done
-        ./setup-loadgenerator.sh "us"
+        ip_and_port=$(get_web_ip_and_port_region "us")
+        ./setup-loadgenerator.sh "$ip_and_port"
 
         for region in "${REGIONS[@]}"; do
             case "$region" in
