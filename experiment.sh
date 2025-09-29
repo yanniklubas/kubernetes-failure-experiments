@@ -1178,22 +1178,26 @@ main() {
 
             REGIONS=("eu" "asia" "southamerica")
             local node
+            local zone
             for region in "${REGIONS[@]}"; do
                 case "$region" in
                 "eu")
                     node="yannik-load-europe"
+                    zone="europe-west1-d"
                     ;;
                 "asia")
                     node="yannik-load-asia"
+                    zone="asia-southeast1-c"
                     ;;
                 "southamerica")
                     node="yannik-load-southamerica"
+                    zone="southamerica-west1-c"
                     ;;
                 esac
 
-                gcloud compute scp "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/summary_out.csv" "$OUTPUT_DIR/${region}_summary_out.csv"
-                gcloud compute scp "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/request_out.csv" "$OUTPUT_DIR/${region}_request_out.csv"
-                gcloud compute ssh "$node" --command="rm -rf kubernetes-failure-experiments/experiment-out"
+                gcloud compute scp --zone "$zone" "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/summary_out.csv" "$OUTPUT_DIR/${region}_summary_out.csv"
+                gcloud compute scp --zone "$zone" "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/request_out.csv" "$OUTPUT_DIR/${region}_request_out.csv"
+                gcloud compute ssh --zone "$zone" "$node" --command="sudo rm -rf kubernetes-failure-experiments/experiment-out"
             done
         fi
 
