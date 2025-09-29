@@ -630,12 +630,19 @@ start_robot_shop() {
     fi
 
     if [[ "$EXPERIMENT_MODE" == "region" ]]; then
-        local region="us"
-        for node in $(kubectl get nodes -l topology.kubernetes.io/region="$region",node-role=web -o name | sed 's|node/||'); do
-            for pod in $(kubectl get pods --field-selector spec.nodeName="$node" -o name); do
-                kubectl label "$pod" region="$region"
+        REGIONS=("us" "asia" "eu" "southamerica")
+        for region in "${REGIONS[@]}"; do
+            for node in $(kubectl get nodes -l topology.kubernetes.io/region="$region",node-role=web -o name | sed 's|node/||'); do
+                for pod in $(kubectl get pods --field-selector spec.nodeName="$node" -o name); do
+                    kubectl label "$pod" region="$region"
+                done
             done
         done
+
+        kubectl patch service web -p '{"spec": {"selector": {"region": "us"}}}'
+        kubectl apply -f "$prefix/web-service-eu.yaml"
+        kubectl apply -f "$prefix/web-service-asia.yaml"
+        kubectl apply -f "$prefix/web-service-southamerica.yaml"
     fi
     log_success "Robot Shop is up and running!"
 }
@@ -747,7 +754,7 @@ get_web_ip_and_port() {
             log_debug "Try #$i: fetching web service IP and port..."
 
             # if gcloud compute ssh web-us --command="curl -s ifconfig.co" > "$stdout"; then > "$stdout"; then
-            if kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
+            if kubectl get nodes topology.kubernetes.io/region=us,node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$stdout"; then
                 printf ":" >>"$stdout"
                 if kubectl get service web -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >>"$stdout"; then
                     local result
@@ -796,6 +803,46 @@ get_web_ip_and_port() {
 
 start_loadgenerator() {
     log_info "Starting load_generator"
+
+    if [[ "$EXPERIMENT_MODE" == "region" ]]; then
+        REGIONS=("eu" "asia" "southamerica")
+        local node
+        for region in "${REGIONS[@]}"; do
+            case "$region" in
+            "eu")
+                node="yannik-load-europe"
+                ;;
+            "asia")
+                node="yannik-load-asia"
+                ;;
+            "southamerica")
+                node="yannik-load-southamerica"
+                ;;
+            esac
+
+            gcloud compute ssh "$node" --command="cd kubernetes-failure-experiment; ./setup-loadgenerator.sh $region"
+        done
+        ./setup-loadgenerator.sh "us"
+
+        for region in "${REGIONS[@]}"; do
+            case "$region" in
+            "eu")
+                node="yannik-load-europe"
+                ;;
+            "asia")
+                node="yannik-load-asia"
+                ;;
+            "southamerica")
+                node="yannik-load-southamerica"
+                ;;
+            esac
+
+            gcloud compute ssh "$node" --command=". kubernetes-failure-experiment/start-loadgenerator.sh" &
+        done
+        ./start-loadgenerator.sh
+
+        return 0
+    fi
 
     if [ ! -d "load-generator" ]; then
         log_info "Cloning HTTP-Load-Generator repository..."
@@ -1018,6 +1065,10 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 
 }
 
+save_multi_region_loadgenerator_files() {
+
+}
+
 main() {
     local repeats="${1:-1}"
     BASE_DIR="$PWD/$EXPERIMENT_NAME"
@@ -1078,6 +1129,31 @@ main() {
         esac
 
         attach_to_docker_container
+
+        if [ "$EXPERIMENT_MODE" = "region" ]; then
+            mv experiment-out/summary_out.csv "$OUTPUT_DIR/summary_out.csv"
+            mv experiment-out/request_out.csv "$OUTPUT_DIR/request_out.csv"
+
+            REGIONS=("eu" "asia" "southamerica")
+            local node
+            for region in "${REGIONS[@]}"; do
+                case "$region" in
+                "eu")
+                    node="yannik-load-europe"
+                    ;;
+                "asia")
+                    node="yannik-load-asia"
+                    ;;
+                "southamerica")
+                    node="yannik-load-southamerica"
+                    ;;
+                esac
+
+                gcloud compute scp "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/summary_out.csv" "$OUTPUT_DIR/${region}_summary_out.csv"
+                gcloud compute scp "$node:/home/seadmin/kubernetes-failure-experiments/experiment-out/request_out.csv" "$OUTPUT_DIR/${region}_request_out.csv"
+                gcloud compute ssh "$node" --command="rm -rf kubernetes-failure-experiments/experiment-out"
+            done
+        fi
 
         # get_pod_and_container_ids >"$OUTPUT_DIR/ids_end.json"
 
