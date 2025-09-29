@@ -824,7 +824,7 @@ start_loadgenerator() {
                 ;;
             esac
 
-            gcloud compute ssh --zone "$zone" "$node" --command="cd kubernetes-failure-experiment; ./setup-loadgenerator.sh $region"
+            gcloud compute ssh --zone "$zone" "$node" --command="cd kubernetes-failure-experiments; ./setup-loadgenerator.sh $region"
         done
         ./setup-loadgenerator.sh "us"
 
@@ -844,7 +844,7 @@ start_loadgenerator() {
                 ;;
             esac
 
-            gcloud compute ssh --zone "$zone" "$node" --command=". kubernetes-failure-experiment/start-loadgenerator.sh" &
+            gcloud compute ssh --zone "$zone" "$node" --command=". kubernetes-failure-experiments/start-loadgenerator.sh" &
         done
         ./start-loadgenerator.sh
 
