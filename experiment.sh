@@ -1065,10 +1065,6 @@ select((.clean_timestamp | fromdateiso8601) > $start_time) |
 
 }
 
-save_multi_region_loadgenerator_files() {
-
-}
-
 main() {
     local repeats="${1:-1}"
     BASE_DIR="$PWD/$EXPERIMENT_NAME"
