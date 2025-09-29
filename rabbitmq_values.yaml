@@ -1,4 +1,10 @@
+rabbitmqImage:
+  repository: bitnamilegacy/rabbitmq
+credentialUpdaterImage:
+  repository: bitnamilegacy/rmq-default-credential-updater
 clusterOperator:
+  image:
+    repository: bitnamilegacy/rabbitmq-cluster-operator
   nodeSelector:
     node-role: worker
   affinity:
@@ -11,6 +17,8 @@ clusterOperator:
                 values:
                   - us
 msgTopologyOperator:
+  image:
+    repository: bitnamilegacy/rmq-messaging-topology-operator
   nodeSelector:
     node-role: worker
   affinity:
