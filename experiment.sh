@@ -807,20 +807,24 @@ start_loadgenerator() {
     if [[ "$EXPERIMENT_MODE" == "region" ]]; then
         REGIONS=("eu" "asia" "southamerica")
         local node
+        local zone
         for region in "${REGIONS[@]}"; do
             case "$region" in
             "eu")
                 node="yannik-load-europe"
+                zone="europe-west1-d"
                 ;;
             "asia")
                 node="yannik-load-asia"
+                zone="asia-southeast1-c"
                 ;;
             "southamerica")
                 node="yannik-load-southamerica"
+                zone="southamerica-west1-c"
                 ;;
             esac
 
-            gcloud compute ssh "$node" --command="cd kubernetes-failure-experiment; ./setup-loadgenerator.sh $region"
+            gcloud compute ssh --zone "$zone" "$node" --command="cd kubernetes-failure-experiment; ./setup-loadgenerator.sh $region"
         done
         ./setup-loadgenerator.sh "us"
 
@@ -828,16 +832,19 @@ start_loadgenerator() {
             case "$region" in
             "eu")
                 node="yannik-load-europe"
+                zone="europe-west1-d"
                 ;;
             "asia")
                 node="yannik-load-asia"
+                zone="asia-southeast1-c"
                 ;;
             "southamerica")
                 node="yannik-load-southamerica"
+                zone="southamerica-west1-c"
                 ;;
             esac
 
-            gcloud compute ssh "$node" --command=". kubernetes-failure-experiment/start-loadgenerator.sh" &
+            gcloud compute ssh --zone "$zone" "$node" --command=". kubernetes-failure-experiment/start-loadgenerator.sh" &
         done
         ./start-loadgenerator.sh
 
