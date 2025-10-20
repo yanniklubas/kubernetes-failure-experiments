@@ -353,7 +353,7 @@ start_application() {
     echo "Cleaning up persistent volumes and persistent volume claims..."
 
     # Persistent Volume Claims
-    for pvc in $(kubectl get pvc -n default -o jsonpatch='{.items[*].metadata.name}'); do
+    for pvc in $(kubectl get pvc -n default -o jsonpath='{.items[*].metadata.name}'); do
         kubectl patch pvc "$pvc" \
             -n default \
             -p '{"metadata": {"finalizers": []}}' \
@@ -362,7 +362,7 @@ start_application() {
     kubectl delete pvc --all --grace-period=0 --force
 
     # Persistent Volumes
-    for pv in $(kubectl get pv -n default -o jsonpatch='{.items[*].metadata.name}'); do
+    for pv in $(kubectl get pv -n default -o jsonpath='{.items[*].metadata.name}'); do
         kubectl patch pv "$pv" \
             -n default \
             -p '{"metadata": {"finalizers": []}}' \
