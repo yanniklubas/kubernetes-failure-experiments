@@ -237,7 +237,7 @@ trap cleanup EXIT SIGINT SIGTERM
 setup_application() {
     echo "Starting robot shop setup..."
 
-    if [[ -d "$APP_REPO" ]]; then
+    if [[ ! -d "$APP_REPO" ]]; then
         echo "Cloning robot shop repository to $APP_REPO..."
         git clone https://github.com/yanniklubas/robot-shop.git "$APP_REPO" || exit 1
     fi
