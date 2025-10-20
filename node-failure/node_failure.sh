@@ -687,6 +687,8 @@ main() {
 
         save_experiment_config "$OUTPUT_DIR/config.yml"
 
+        start_application
+
         start_loadgenerator
 
         # Failure injection
