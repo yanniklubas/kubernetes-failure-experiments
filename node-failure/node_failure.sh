@@ -330,7 +330,7 @@ start_application() {
         done
     }
 
-    if [[ -d "$MANIFESTS_PATH" ]]; then
+    if [[ -d "$TEMPLATES_PATH" ]]; then
         echo "Deleting existing robot shop deployment..."
 
         kubectl delete -f "$TEMPLATES_PATH/redis-statefulset.yaml" || true
@@ -374,6 +374,13 @@ start_application() {
     if helm list --namespace default | grep "^rabbitmq-operator" >/dev/null 2>&1; then
         helm uninstall rabbitmq-operator --wait
     fi
+    # RabbitMQ Operator install
+    helm install rabbitmq-operator \
+        rabbitmq/rabbitmq-cluster-operator \
+        --version 3.6.6 \
+        --values "$PWD/rabbitmq_values.yaml"
+    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=rabbitmq-cluster-operator --timeout -1s
+    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/instance=rabbitmq-operator --timeout -1s
 
     echo "Applying service: redis"
     kubectl apply -f "$TEMPLATES_PATH/redis-statefulset.yaml"
@@ -381,12 +388,6 @@ start_application() {
 
     apply_services "${infra_services[@]}"
     apply_services "${app_services[@]}"
-
-    # RabbitMQ Operator install
-    helm install rabbitmq-operator \
-        rabbitmq/rabbitmq-cluster-operator \
-        --version 3.6.6 \
-        --values "$PWD/rabbitmq_values.yaml"
 
     wait_for_ready "${infra_services[@]}"
     wait_for_ready "${app_services[@]}"
