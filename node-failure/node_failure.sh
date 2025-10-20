@@ -479,7 +479,7 @@ start_loadgenerator() {
 
         echo "Starting docker compose services for loadgenerator..."
         docker compose \
-            --file "$LOADGENERATOR_DOCKER_COMPOSE_FILENAME" \
+            --file "$LOADGENERATOR_DOCKER_COMPOSE_FILE" \
             up \
             --force-recreate \
             --wait \
