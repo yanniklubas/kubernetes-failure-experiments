@@ -677,7 +677,7 @@ main() {
         OUTPUT_DIR="$BASE_DIR/node-failure-experiment-$i"
         mkdir -p "$OUTPUT_DIR"
 
-        echo "Starting experiment iteration $i..."
+        echo "Starting experiment iteration $i/$repeats..."
         enable_autoscaling
         select_node_failure_instance
 
@@ -714,7 +714,7 @@ main() {
 
         reset_cluster
 
-        echo "Experiment iteration $i finished"
+        echo "Experiment iteration $i/$repeats finished"
     done
 
     disable_autoscaling
