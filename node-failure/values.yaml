@@ -53,12 +53,16 @@ dispatch:
       effect: "NoExecute"
       tolerationSeconds: 1
 mongodb:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 mysql:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
@@ -76,16 +80,18 @@ payment:
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
-rabbitmq: {}
-ratings:
+rabbitmq:
   nodeSelector:
-    cloud.google.com/gke-nodepool: default-pool
+    cloud.google.com/gke-nodepool: storage-pool
+ratings:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 redis:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
   # Storage class to use with redis statefulset.
   storageClassName: standard
   tolerations:
