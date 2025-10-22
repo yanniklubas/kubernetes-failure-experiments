@@ -5,6 +5,8 @@ credentialUpdaterImage:
 clusterOperator:
   image:
     repository: bitnamilegacy/rabbitmq-cluster-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "storage"
       operator: "Exists"
@@ -12,6 +14,8 @@ clusterOperator:
 msgTopologyOperator:
   image:
     repository: bitnamilegacy/rmq-messaging-topology-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "storage"
       operator: "Exists"
