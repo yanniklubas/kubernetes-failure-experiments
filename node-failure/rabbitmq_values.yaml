@@ -5,6 +5,10 @@ credentialUpdaterImage:
 clusterOperator:
   image:
     repository: bitnamilegacy/rabbitmq-cluster-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
 msgTopologyOperator:
   image:
     repository: bitnamilegacy/rmq-messaging-topology-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
