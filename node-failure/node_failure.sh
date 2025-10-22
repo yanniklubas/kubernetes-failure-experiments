@@ -274,9 +274,10 @@ setup_application() {
 }
 
 start_application() {
-
-    local infra_services=("mongodb" "mysql" "rabbitmq")
-    local app_services=(
+    local services=(
+        "mongodb"
+        "mysql"
+        "rabbitmq"
         "cart"
         "catalogue"
         "dispatch"
@@ -322,8 +323,7 @@ start_application() {
     apply_services() {
         for service in "$@"; do
             echo "Applying service: $service"
-            if [[ "$WITH_CIRCUITBREAKER" == true &&
-                ($service == "cart" || $service == "ratings") ]]; then
+            if [[ "$WITH_CIRCUITBREAKER" == true && $service == "cart" ]]; then
                 kubectl apply -f "$TEMPLATES_PATH/$service-cb-deployment.yaml"
             else
                 kubectl apply -f "$TEMPLATES_PATH/$service-deployment.yaml"
@@ -346,8 +346,7 @@ start_application() {
         kubectl delete -f "$TEMPLATES_PATH/redis-statefulset.yaml" || true
         kubectl delete -f "$TEMPLATES_PATH/redis-service.yaml" || true
 
-        delete_services "${infra_services[@]}"
-        delete_services "${app_services[@]}"
+        delete_services "${services[@]}"
 
         # RabbitMQ Operator
         kubectl patch rabbitmqclusters.rabbitmq.com rabbitmq \
@@ -356,8 +355,7 @@ start_application() {
         kubectl delete pod rabbitmq-server-0 --now || true
 
         echo "Waiting for all pods to terminate..."
-        wait_for_delete "${infra_services[@]}"
-        wait_for_delete "${app_services[@]}"
+        wait_for_delete "${services[@]}"
     fi
 
     echo "Cleaning up persistent volumes and persistent volume claims..."
@@ -396,11 +394,9 @@ start_application() {
     kubectl apply -f "$TEMPLATES_PATH/redis-statefulset.yaml"
     kubectl apply -f "$TEMPLATES_PATH/redis-service.yaml"
 
-    apply_services "${infra_services[@]}"
-    apply_services "${app_services[@]}"
+    apply_services "${services[@]}"
 
-    wait_for_ready "${infra_services[@]}"
-    wait_for_ready "${app_services[@]}"
+    wait_for_ready "${services[@]}"
 
     local replicas=2
     echo "Scaling web service to $replicas replicas"
