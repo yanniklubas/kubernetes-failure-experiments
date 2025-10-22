@@ -53,21 +53,23 @@ dispatch:
       effect: "NoExecute"
       tolerationSeconds: 1
 mongodb:
-  nodeSelector:
-    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"
 mysql:
-  nodeSelector:
-    cloud.google.com/gke-nodepool: storage-pool
   tolerations:
     - key: "node.kubernetes.io/not-ready"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"
 payment:
   # Alternative payment gateway URL
   # Default is https://www.paypal.com
@@ -81,8 +83,10 @@ payment:
       effect: "NoExecute"
       tolerationSeconds: 1
 rabbitmq:
-  nodeSelector:
-    cloud.google.com/gke-nodepool: storage-pool
+  tolerations:
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"
 ratings:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
@@ -90,8 +94,6 @@ ratings:
       effect: "NoExecute"
       tolerationSeconds: 1
 redis:
-  nodeSelector:
-    cloud.google.com/gke-nodepool: storage-pool
   # Storage class to use with redis statefulset.
   storageClassName: standard
   tolerations:
@@ -99,6 +101,9 @@ redis:
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"
 shipping:
   tolerations:
     - key: "node.kubernetes.io/not-ready"
