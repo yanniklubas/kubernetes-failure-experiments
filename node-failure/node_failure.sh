@@ -256,6 +256,7 @@ setup_application() {
         cd "$APP_REPO" || exit 1
 
         git checkout node-failure
+        git pull
     )
 
     mkdir -p "$MANIFESTS_PATH"
@@ -445,6 +446,7 @@ setup_loadgenerator() {
         cd "$LOADGENERATOR_PATH" || exit 1
 
         git checkout node-failure-retry
+        git pull
 
         cd "$LOADGENERATOR_BUILD_PATH" || exit 1
 
