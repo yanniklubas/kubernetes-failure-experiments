@@ -268,7 +268,7 @@ setup_application() {
         --values "$PWD/values.yaml"
 
     mkdir -p "$BASE_DIR/manifests"
-    cp "$TEMPLATES_PATH/." "$BASE_DIR/manifests/"
+    cp -a "$TEMPLATES_PATH/." "$BASE_DIR/manifests/"
 
     echo "Applying local storage class..."
     kubectl apply -f "$APP_REPO/K8s/local-storage-class.yml"
