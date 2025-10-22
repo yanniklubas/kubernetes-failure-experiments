@@ -174,6 +174,16 @@ save_experiment_config() {
     echo "Experiment configuration saved to $out_file!"
 }
 
+save_node_info() {
+    local out_file="$1"
+    if kubectl get nodes -o yaml >"$out_file"; then
+        echo "Node info saved!"
+    else
+        echo "Failed to save node info!"
+        exit 1
+    fi
+}
+
 log_scheduling_events() {
     local start_time
     start_time=$(date -u +%s)
@@ -687,6 +697,7 @@ main() {
         log_node_events &
 
         save_experiment_config "$OUTPUT_DIR/config.yml"
+        save_node_info "$OUTPUT_DIR/nodes.yml"
 
         start_application
 
