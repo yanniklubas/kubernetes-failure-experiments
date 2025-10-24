@@ -298,8 +298,7 @@ start_application() {
     delete_services() {
         for service in "$@"; do
             echo "Deleting service: $service"
-            if [[ "$WITH_CIRCUITBREAKER" == true &&
-                ($service == "cart" || $service == "ratings") ]]; then
+            if [[ "$WITH_CIRCUITBREAKER" == true && $service == "cart" ]]; then
                 kubectl delete \
                     -f "$TEMPLATES_PATH/$service-cb-deployment.yaml" \
                     --now \
