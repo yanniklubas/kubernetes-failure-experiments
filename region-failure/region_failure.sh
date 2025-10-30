@@ -447,7 +447,10 @@ start_load_generator_remote() {
     gcloud compute ssh --zone "$zone" "$node" --command="bash -s" <<EOF
 echo "Starting load generator $node"
 if [ ! -d "$OUTPUT_DIR" ]; then
-    mkdir -p $OUTPUT_DIR
+    mkdir -p "$OUTPUT_DIR"
+elif [[ "$region" != "us" ]]; then
+    rm -rf "$OUTPUT_DIR"
+    mkdir -p "$OUTPUT_DIR"
 fi
 cd "$LOADGENERATOR_DOCKER_PATH" || exit 1
 lua_file=\$(mktemp)
