@@ -341,10 +341,10 @@ query_web_service_ip_and_port() {
     local tmp
     tmp=$(mktemp)
 
-    echo "Attempting to get web service IP and port (max tries: $max_tries)..." >&2
+    echo "Attempting to get web service IP and port for region $region (max tries: $max_tries)..." >&2
     for ((i = 0; i < "$max_tries"; i++)); do
         echo "Try #$i: fetching web service IP and port..." >&2
-        if kubectl get nodes topology.kubernetes.io/region="$region",node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$tmp"; then
+        if kubectl get nodes -l topology.kubernetes.io/region="$region",node-role=web -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' >"$tmp"; then
             printf ":" >>"$tmp"
             local service_name="web-$region"
             if kubectl get service "$service_name" -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' >>"$tmp"; then
@@ -352,17 +352,17 @@ query_web_service_ip_and_port() {
                 rm -f "$tmp"
                 return 0
             else
-                echo "Failed to fetch port on try #$i" >&2
+                echo "Failed to fetch port on try #$((i + 1))" >&2
             fi
         else
-            echo "Failed to fetch IP on try #$i" >&2
+            echo "Failed to fetch IP on try #$((i + 1))" >&2
         fi
 
         truncate -s 0 "$tmp"
         sleep 1
     done
 
-    echo "Failed to get web service IP and port after $max_tries attempts."
+    echo "Failed to get web service IP and port after $max_tries attempts for region $region."
     rm -f "$tmp"
     return 1
 }
@@ -409,42 +409,42 @@ EOF
     done
 }
 
-start_loadgenerator() {
+start_load_generator_remote() {
     local node zone ip_and_port
-    for region in "${REGIONS[@]}"; do
-        case "$region" in
-        us)
-            node="yannik-load"
-            zone="us-central1-f"
-            ;;
-        eu)
-            node="yannik-load-europe"
-            zone="europe-west1-d"
-            ;;
-        asia)
-            node="yannik-load-asia"
-            zone="asia-southeast1-c"
-            ;;
-        southamerica)
-            node="yannik-load-southamerica"
-            zone="southamerica-west1-c"
-            ;;
-        *)
-            echo "Unknown region: $region" >&2
-            exit 1
-            ;;
-        esac
+    local region="$1"
+    case "$region" in
+    us)
+        node="yannik-load"
+        zone="us-central1-f"
+        ;;
+    eu)
+        node="yannik-load-europe"
+        zone="europe-west1-d"
+        ;;
+    asia)
+        node="yannik-load-asia"
+        zone="asia-southeast1-c"
+        ;;
+    southamerica)
+        node="yannik-load-southamerica"
+        zone="southamerica-west1-c"
+        ;;
+    *)
+        echo "Unknown region: $region" >&2
+        exit 1
+        ;;
+    esac
 
-        ip_and_port=$(query_web_service_ip_and_port "$region")
-        local ip port
-        ip="${ip_and_port%:*}"
-        port="${ip_and_port#*:}"
-        if [[ -z "$ip" || -z "$port" ]]; then
-            echo "Invalid IP or port retrieved: $ip_and_port"
-            exit 1
-        fi
+    ip_and_port=$(query_web_service_ip_and_port "$region")
+    local ip port
+    ip="${ip_and_port%:*}"
+    port="${ip_and_port#*:}"
+    if [[ -z "$ip" || -z "$port" ]]; then
+        echo "Invalid IP or port retrieved: $ip_and_port"
+        exit 1
+    fi
 
-        gcloud compute ssh --zone "$zone" "$node" --command="bash -s" <<EOF
+    gcloud compute ssh --zone "$zone" "$node" --command="bash -s" <<EOF
 echo "Starting load generator $node"
 if [ ! -d "$OUTPUT_DIR" ]; then
     mkdir -p $OUTPUT_DIR
@@ -468,9 +468,24 @@ docker compose \
     up \
     --force-recreate \
     --wait \
-    --build
+    --build >/dev/null 2>&1
 echo "Loadgenerator $node started successfully!"
 EOF
+}
+
+start_loadgenerator() {
+    declare -A pids=()
+    for region in "${REGIONS[@]}"; do
+        start_load_generator_remote "$region" &
+        pids[$!]="$region"
+    done
+
+    for pid in "${!pids[@]}"; do
+        if wait "$pid"; then
+            echo "Loadgenerator in region ${pids[$pid]} started!"
+        else
+            echo "Loadgenerator in region ${pids[$pid]} failed to start!"
+        fi
     done
 }
 
