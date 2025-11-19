@@ -520,22 +520,32 @@ inject_node_failure() {
     else
         echo "Failed to inject node failure on $NODE_FAILURE_INSTANCE!"
     fi
-    while true; do
-        local status
-        status=$(gcloud compute instances describe "$NODE_FAILURE_INSTANCE" \
-            --zone="$NODE_FAILURE_ZONE" \
-            --format="get(status)")
-        if [[ "$status" == "TERMINATED" ]]; then
-            echo "Instance '$NODE_FAILURE_INSTANCE' is fully stopped." >&2
-            break
-        fi
-        sleep 1
-    done
+    # while true; do
+    #     local status
+    #     status=$(gcloud compute instances describe "$NODE_FAILURE_INSTANCE" \
+    #         --zone="$NODE_FAILURE_ZONE" \
+    #         --format="get(status)")
+    #     if [[ "$status" == "TERMINATED" ]]; then
+    #         echo "Instance '$NODE_FAILURE_INSTANCE' is fully stopped." >&2
+    #         break
+    #     fi
+    #     sleep 1
+    # done
+    # if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"; then
+    #     echo "Node '$NODE_FAILURE_INSTANCE' started successfully." >&2
+    #     kubectl label node "$NODE_FAILURE_INSTANCE" node-role=worker topology.kubernetes.io/region=us
+    # else
+    #     echo "Failed to start node '$NODE_FAILURE_INSTANCE'." >&2
+    # fi
+}
+
+start_failure_instance() {
     if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"; then
         echo "Node '$NODE_FAILURE_INSTANCE' started successfully." >&2
         kubectl label node "$NODE_FAILURE_INSTANCE" node-role=worker topology.kubernetes.io/region=us
     else
         echo "Failed to start node '$NODE_FAILURE_INSTANCE'." >&2
+        exit 1
     fi
 }
 
@@ -741,6 +751,8 @@ main() {
         save_container_stats "$start_ts" "$end_ts"
 
         kill_jobs
+
+        start_failure_instance
 
         measure_node_latencies "end"
 
