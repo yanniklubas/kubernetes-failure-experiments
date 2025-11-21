@@ -235,7 +235,6 @@ save_ready_duration() {
         sleep 1
         wait_for_ready "$service"
         pod_json=$(kubectl get pod -l service="$service" -o json)
-        echo "$pod_json" >"pod.json"
         if [[ $(jq '.items | length' <<<"$pod_json") -eq 0 ]]; then
             printf "%s has no pods!!\n" "$service"
             continue
