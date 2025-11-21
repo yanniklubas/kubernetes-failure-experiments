@@ -184,6 +184,8 @@ start_application() {
 
     wait_for_ready "${services[@]}"
 
+    kubectl scale deployment -l service=shipping --replicas=1
+
     echo "Robot shop is up and running!"
 }
 
@@ -202,17 +204,48 @@ save_ready_duration() {
         "web"
     )
 
+    delete_pod_and_wait() {
+        local service="$1"
+        local pod
+        echo "Deleting service: $service"
+        pod=$(kubectl get pod -l service="$service" --no-headers | awk '{print $1}')
+        echo "$pod"
+        kubectl delete \
+            pod \
+            "$pod"
+
+        echo "Waiting for service $service to terminate"
+        kubectl wait --for=delete pod "$pod" --timeout -1s || true
+        echo "Service $service terminated"
+    }
+
+    wait_for_ready() {
+        local service="$1"
+        echo "Waiting for service $service to become ready..."
+        kubectl wait --for=condition=Ready pod -l "service=$service" --timeout -1s || true
+        echo "Service $service is ready"
+    }
+
     local rep="$1"
     local out="$BASE_DIR/container_start_times-${rep}.csv"
     printf "%s\n" "service,ready_time" >"$out"
-    local ready_time
+    local ready_time pod_json
     for service in "${services[@]}"; do
-        ready_time=$(kubectl get pod -l service="$service" -o json | jq -r '
-        .status as $status |
+        delete_pod_and_wait "$service"
+        sleep 1
+        wait_for_ready "$service"
+        pod_json=$(kubectl get pod -l service="$service" -o json)
+        echo "$pod_json" >"pod.json"
+        if [[ $(jq '.items | length' <<<"$pod_json") -eq 0 ]]; then
+            printf "%s has no pods!!\n" "$service"
+            continue
+        fi
+        ready_time=$(jq -r '
+        .items[0].status as $status |
             ($status.startTime | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $start |
             ($status.conditions[] | select(.type == "Ready") | .lastTransitionTime | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) as $ready |
             ($ready - $start)
-        ')
+        ' <<<"$pod_json")
         printf "%s,%s\n" "$service" "$ready_time" >>"$out"
     done
 }
