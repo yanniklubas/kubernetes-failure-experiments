@@ -1,0 +1,22 @@
+rabbitmqImage:
+  repository: bitnamilegacy/rabbitmq
+credentialUpdaterImage:
+  repository: bitnamilegacy/rmq-default-credential-updater
+clusterOperator:
+  image:
+    repository: bitnamilegacy/rabbitmq-cluster-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
+  tolerations:
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"
+msgTopologyOperator:
+  image:
+    repository: bitnamilegacy/rmq-messaging-topology-operator
+  nodeSelector:
+    cloud.google.com/gke-nodepool: storage-pool
+  tolerations:
+    - key: "storage"
+      operator: "Exists"
+      effect: "NoSchedule"

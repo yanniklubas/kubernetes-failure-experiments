@@ -93,19 +93,11 @@ start_application() {
     delete_services() {
         for service in "$@"; do
             echo "Deleting service: $service"
-            if [[ "$WITH_CIRCUITBREAKER" == true && $service == "cart" ]]; then
-                kubectl delete \
-                    -f "$TEMPLATES_PATH/$service-cb-deployment.yaml" \
-                    --now \
-                    --timeout 1s ||
-                    true
-            else
-                kubectl delete \
-                    -f "$TEMPLATES_PATH/$service-deployment.yaml" \
-                    --now \
-                    --timeout 1s ||
-                    true
-            fi
+            kubectl delete \
+                -f "$TEMPLATES_PATH/$service-deployment.yaml" \
+                --now \
+                --timeout 1s ||
+                true
             kubectl delete -f "$TEMPLATES_PATH/$service-service.yaml" --now --timeout 1s || true
         done
     }
@@ -121,11 +113,7 @@ start_application() {
     apply_services() {
         for service in "$@"; do
             echo "Applying service: $service"
-            if [[ "$WITH_CIRCUITBREAKER" == true && $service == "cart" ]]; then
-                kubectl apply -f "$TEMPLATES_PATH/$service-cb-deployment.yaml"
-            else
-                kubectl apply -f "$TEMPLATES_PATH/$service-deployment.yaml"
-            fi
+            kubectl apply -f "$TEMPLATES_PATH/$service-deployment.yaml"
             kubectl apply -f "$TEMPLATES_PATH/$service-service.yaml"
         done
     }
