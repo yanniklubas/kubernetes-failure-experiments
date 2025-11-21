@@ -126,7 +126,7 @@ start_application() {
         done
     }
 
-    if kubectl get pods; then
+    if ! kubectl get pods --no-headers 2>/dev/null | grep -q .; then
         echo "Deleting existing robot shop deployment..."
 
         kubectl delete -f "$TEMPLATES_PATH/redis-statefulset.yaml" || true
