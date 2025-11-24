@@ -391,8 +391,8 @@ start_application() {
         --version 3.6.6 \
         --values "$PWD/rabbitmq_values.yaml"
 
-    kubectl get deployment -l app.kubernetes.io/componenty=rabbitmq-operator -o yaml >"$TEMPLATES_PATH/rabbitmq-cluster-operator-deployment.yaml"
-    kubectl get deployment -l app.kubernetes.io/component=messaging-topology-operator -o yaml >"$TEMPLATES_PATH/rabbitmq-messaging-topology-operator-deployment.yaml"
+    kubectl get deployment rabbitmq-operator-rabbitmq-cluster-operator -o yaml >"$BASE_DIR/manifests/rabbitmq-cluster-operator-deployment.yaml"
+    kubectl get deployment rabbitmq-operator-rabbitmq-messaging-topology-operator -o yaml >"$BASE_DIR/manifests/rabbitmq-messaging-topology-operator-deployment.yaml"
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/componenty=rabbitmq-operator --timeout -1s
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=messaging-topology-operator --timeout -1s
 
