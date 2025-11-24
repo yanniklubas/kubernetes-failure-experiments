@@ -390,12 +390,17 @@ start_application() {
         rabbitmq/rabbitmq-cluster-operator \
         --version 3.6.6 \
         --values "$PWD/rabbitmq_values.yaml"
-    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=rabbitmq-cluster-operator --timeout -1s
-    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/instance=rabbitmq-operator --timeout -1s
+
+    kubectl get deployment -l app.kubernetes.io/componenty=rabbitmq-operator -o yaml >"$TEMPLATES_PATH/rabbitmq-cluster-operator-deployment.yaml"
+    kubectl get deployment -l app.kubernetes.io/component=messaging-topology-operator -o yaml >"$TEMPLATES_PATH/rabbitmq-messaging-topology-operator-deployment.yaml"
+    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/componenty=rabbitmq-operator --timeout -1s
+    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=messaging-topology-operator --timeout -1s
 
     echo "Applying service: redis"
     kubectl apply -f "$TEMPLATES_PATH/redis-statefulset.yaml"
     kubectl apply -f "$TEMPLATES_PATH/redis-service.yaml"
+
+    wait_for_ready "redis"
 
     apply_services "${services[@]}"
 
