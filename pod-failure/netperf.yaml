@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netperf
+  namespace: kube-system
+  labels:
+    app: netperf
+spec:
+  selector:
+    matchLabels:
+      app: netperf
+  template:
+    metadata:
+      labels:
+        app: netperf
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: netserver
+          image: networkstatic/netserver
+          args:
+            - -D
+          ports:
+            - containerPort: 12865 # Default netserver port
+              protocol: TCP
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+        - name: netperf
+          image: networkstatic/netperf
+          command:
+            - sleep
+            - infinity
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]

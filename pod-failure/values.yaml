@@ -1,0 +1,59 @@
+# Registry and repository for Docker images
+# Default is docker/robotshop/image:latest
+image:
+  repo: saurabhjha1
+  version: 2.1.0-kubespray
+  pullPolicy: Always
+# EUM configuration
+# Provide your key and set the endpoint
+eum:
+  key: null
+  url: https://eum-eu-west-1.instana.io
+  #url: https://eum-us-west-2.instana.io
+databases:
+  # define whether databases should also be resource-constrained
+  applyResourceLimits: true
+# Some Kubernetes filesystems (e.g. IBM Cloud Gold) require root access to volumes (set to true to change security context for rabbitmq and redis
+# which be default run as non-root
+rootOnlyFilesystem: false
+# Pod Security Policy
+psp:
+  enabled: false
+# For the mini ones minikube, minishift set to true
+nodeport: false
+# "special" Openshift. Set to true when deploying to any openshift flavour
+openshift: false
+ocCreateRoute: false
+######################################
+# Affinities for individual workloads
+# set in the following way:
+# <workload>:
+#   affinity: {}
+#   nodeSelector: {}
+#   tolerations: []
+######################################
+cart: {}
+catalogue: {}
+dispatch: {}
+mongodb: {}
+mysql: {}
+payment:
+  # Alternative payment gateway URL
+  # Default is https://www.paypal.com
+  gateway: null
+  #gateway: https://www.worldpay.com
+  # some Linux and Kubernetes distros (e.g. Minikube) use maxconn limit of 128, payment requires 200, set to true if required
+  increaseMaxConn: false
+rabbitmq: {}
+ratings: {}
+redis:
+  # Storage class to use with redis statefulset.
+  storageClassName: standard
+shipping: {}
+user: {}
+web: {}
+instana:
+  agent:
+    # {instan-svc}.{namespace}
+    host: instana-agent.instana-agent
+    port: 42699
