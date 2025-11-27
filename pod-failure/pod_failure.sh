@@ -284,9 +284,15 @@ start_application() {
     }
 
     wait_for_ready() {
+        local label
         for service in "$@"; do
             echo "Waiting for service $service to become ready..."
-            kubectl wait --for=condition=Ready pod -l "service=$service" --timeout -1s || true
+            if [[ "$service" == "rabbitmq" ]]; then
+                label="app.kubernetes.io/name=$service"
+            else
+                label="service=$service"
+            fi
+            kubectl wait --for=condition=Ready pod -l "$label" --timeout -1s || true
             echo "Service $service is ready"
         done
     }
