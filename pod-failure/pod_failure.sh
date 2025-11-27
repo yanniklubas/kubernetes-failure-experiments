@@ -210,7 +210,7 @@ install_chaos_mesh() {
     helm repo add chaos-mesh https://charts.chaos-mesh.org
     kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f -
 
-    helm install chaos-mesh chaos/mesh \
+    helm install chaos-mesh chaos-mesh/chaos-mesh \
         --namespace "$namespace" \
         --set chaosDaemon.runtime=containerd \
         --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
