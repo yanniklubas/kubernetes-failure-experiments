@@ -358,6 +358,7 @@ start_application() {
     wait_for_ready "redis"
 
     apply_services "rabbitmq"
+    sleep 1
     wait_for_ready "rabbitmq"
 
     apply_services "${services[@]}"
