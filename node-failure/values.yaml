@@ -36,19 +36,19 @@ cart:
   nodeSelector:
     cloud.google.com/gke-nodepool: default-pool
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 catalogue:
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 dispatch:
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -56,7 +56,7 @@ mongodb:
   nodeSelector:
     cloud.google.com/gke-nodepool: storage-pool
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -67,7 +67,7 @@ mysql:
   nodeSelector:
     cloud.google.com/gke-nodepool: storage-pool
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -82,7 +82,7 @@ payment:
   # some Linux and Kubernetes distros (e.g. Minikube) use maxconn limit of 128, payment requires 200, set to true if required
   increaseMaxConn: false
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -95,7 +95,7 @@ rabbitmq:
       effect: "NoSchedule"
 ratings:
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -105,7 +105,7 @@ redis:
   nodeSelector:
     cloud.google.com/gke-nodepool: storage-pool
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -114,13 +114,13 @@ redis:
       effect: "NoSchedule"
 shipping:
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 user:
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -136,7 +136,7 @@ web:
                   - web
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unschedulable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1

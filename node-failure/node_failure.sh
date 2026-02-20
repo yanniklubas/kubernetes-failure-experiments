@@ -98,7 +98,7 @@ now() {
 
 enable_autoscaling() {
     # SMALL NODES
-    local min_nodes=1
+    local min_nodes=0
     local max_nodes=5
     gcloud container clusters update "$CLUSTER" \
         --enable-autoscaling \
@@ -109,7 +109,7 @@ enable_autoscaling() {
         --quiet
 
     # LARGE NODES
-    min_nodes=1
+    min_nodes=0
     max_nodes=5
     gcloud container clusters update "$CLUSTER" \
         --enable-autoscaling \
@@ -212,7 +212,6 @@ log_node_events() {
         --field-selector involvedObject.kind=Node \
         -o json |
         jq --unbuffered --argjson start_time "$start_time" '
-select(.reason=="NodeReady" or .reason=="NodeNotReady") |
 select(.lastTimestamp != null or .eventTime != null) |
 .timestamp = (.lastTimestamp // .eventTime) |
 .clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
@@ -711,6 +710,7 @@ main() {
         # Failure injection
         local start_ts
         start_ts=$(now)
+        echo "$start_ts" >"$OUTPUT_DIR/node_failure_time"
         inject_node_failure "$start_ts" &
 
         follow_logs
