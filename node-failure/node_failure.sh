@@ -679,6 +679,12 @@ save_container_stats() {
     done
 }
 
+collect_autoscaler_logs() {
+    local start_time
+    start_time=$(head -n 1 "$OUTPUT_DIR/summary_out.csv" | cut -d ',' -f 9 | sed -E 's#([0-9]{2})\.([0-9]{2})\.([0-9]{4});([0-9]{2}:[0-9]{2}:[0-9]{2}).*#\3-\2-\1T\4Z#')
+    gcloud logging read "resource.type=\"k8s_cluster\" AND logName:\"cluster-autoscaler\" AND timestamp >= \"$start_time\"" --format json | jq '.' >"$OUTPUT_DIR/autoscaler_logs.json"
+}
+
 main() {
     local repeats="${1:-1}"
 
@@ -723,6 +729,8 @@ main() {
         if [[ "$WITH_CIRCUITBREAKER" == true ]]; then
             save_circuitbreaker_logs
         fi
+
+        collect_autoscaler_logs
 
         kill_jobs
 
