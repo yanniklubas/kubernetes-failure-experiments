@@ -517,6 +517,7 @@ inject_node_failure() {
     local sleep_secs now_ts wake_ts
 
     wake_ts=$((start_ts + WARMUP_DURATION + WARMUP_PAUSE + NODE_FAILURE_TIME))
+    echo "$wake_ts" >"$OUTPUT_DIR/node_failure_time"
     now_ts=$(now)
 
     sleep_secs=$((wake_ts - now_ts))
@@ -710,7 +711,6 @@ main() {
         # Failure injection
         local start_ts
         start_ts=$(now)
-        echo "$start_ts" >"$OUTPUT_DIR/node_failure_time"
         inject_node_failure "$start_ts" &
 
         follow_logs
