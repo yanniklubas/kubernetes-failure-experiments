@@ -139,15 +139,15 @@ disable_autoscaling() {
 }
 
 reset_cluster() {
-    # SMALL NODES
-    gcloud container clusters resize "$CLUSTER" \
-        --node-pool "$SMALL_POOL" \
-        --num-nodes=1 \
-        --zone="$ZONE" \
-        --quiet
     # LARGE NODES
     gcloud container clusters resize "$CLUSTER" \
         --node-pool "$LARGE_POOL" \
+        --num-nodes=1 \
+        --zone="$ZONE" \
+        --quiet
+    # SMALL NODES
+    gcloud container clusters resize "$CLUSTER" \
+        --node-pool "$SMALL_POOL" \
         --num-nodes=1 \
         --zone="$ZONE" \
         --quiet
