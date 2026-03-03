@@ -186,6 +186,16 @@ save_node_info() {
     fi
 }
 
+save_pod_info() {
+    local out_file="$1"
+    if kubectl get pods -A --field-selector metadata.namespace!=default -o yaml >"$out_file"; then
+        echo "System pod info saved!"
+    else
+        echo "Failed to save system pod info!"
+        exit 1
+    fi
+}
+
 log_scheduling_events() {
     local start_time
     start_time=$(date -u +%s)
@@ -712,6 +722,8 @@ main() {
 
         save_experiment_config "$OUTPUT_DIR/config.yml"
         save_node_info "$OUTPUT_DIR/nodes.yml"
+        save_pod_info "$OUTPUT_DIR/system-pod.yaml"
+
         local failure_mig failure_instance
         failure_mig=$(select_node_failure_mig)
         failure_instance=$(select_node_failure_instance)
