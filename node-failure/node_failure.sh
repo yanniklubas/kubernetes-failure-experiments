@@ -38,21 +38,23 @@ else
 fi
 BASE_DIR="$PWD/$EXPERIMENT_NAME"
 
-NODE_FAILURE_INSTANCE=""
 select_node_failure_instance() {
-    local matches count
-    matches=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | grep "$LARGE_POOL")
-
-    count=$(echo "$matches" | wc -l)
-
-    if [[ "$count" -eq 1 ]]; then
-        NODE_FAILURE_INSTANCE="$matches"
-    else
-        echo "Found $count nodes as failure instance"
-        exit 1
-    fi
+    # local matches count
+    # matches=$(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers | grep "$LARGE_POOL")
+    #
+    # count=$(echo "$matches" | wc -l)
+    #
+    # if [[ "$count" -eq 1 ]]; then
+    #     NODE_FAILURE_INSTANCE="$matches"
+    # else
+    #     echo "Found $count nodes as failure instance"
+    #     exit 1
+    # fi
+    gcloud compute instances list | grep "$LARGE_POOL" | awk '{print $1}'
 }
-select_node_failure_instance
+select_node_failure_mig() {
+    gcloud container clusters describe "$CLUSTER" --format="table(nodePools.name, nodePools.instanceGroupUrls.basename())" --flatten nodePools | grep "$LARGE_POOL" | sed -n "s/.*'\(.*\)'.*/\1/p"
+}
 # ++++++++++++++++++++++
 # ++ HELPER FUNCTIONS ++
 # ++++++++++++++++++++++
@@ -167,7 +169,7 @@ save_experiment_config() {
         printf "warmup_duration: %s\n" "$WARMUP_DURATION"
         printf "warmup_rps: %s\n" "$WARMUP_RPS"
         printf "warmup_pause: %s\n" "$WARMUP_PAUSE"
-        printf "failure_instance: %s\n" "$NODE_FAILURE_INSTANCE"
+        printf "failure_node_pool: %s\n" "$LARGE_POOL"
         printf "failure_time: %s\n" "$NODE_FAILURE_TIME"
     } >"$out_file"
 
@@ -514,6 +516,8 @@ follow_logs() {
 
 inject_node_failure() {
     local start_ts="$1"
+    local failure_mig="$2"
+    local failure_instance="$3"
     local sleep_secs now_ts wake_ts
 
     wake_ts=$((start_ts + WARMUP_DURATION + WARMUP_PAUSE + NODE_FAILURE_TIME))
@@ -523,15 +527,15 @@ inject_node_failure() {
     sleep_secs=$((wake_ts - now_ts))
     echo "Sleeping for $sleep_secs seconds before injecting node failure..."
     sleep "$sleep_secs"
-    echo "Injecting node failure on instance $NODE_FAILURE_INSTANCE"
-
-    if gcloud compute ssh \
-        "$USER@$NODE_FAILURE_INSTANCE" \
-        --command="nohup sudo poweroff --force >/dev/null 2>&1 &"; then
-        echo "Successfully injected node failure on $NODE_FAILURE_INSTANCE!"
+    echo "Injecting node failure on instance $failure_instance"
+    gcloud compute ssh "$USER@$failure_instance" --command="nohup sudo poweroff --force >/dev/null 2>&1 &" &
+    local pid=$!
+    if gcloud compute instance-groups managed delete-instances "$failure_mig" --instances="$failure_instance" --quiet; then
+        echo "Successfully injected node failure on $failure_instance!"
     else
-        echo "Failed to inject node failure on $NODE_FAILURE_INSTANCE!"
+        echo "Failed to inject node failure on $failure_instance!"
     fi
+    wait "$pid"
 }
 
 save_circuitbreaker_logs() {
@@ -700,7 +704,6 @@ main() {
 
         echo "Starting experiment iteration $((i + 1))/$repeats..."
         enable_autoscaling
-        select_node_failure_instance
 
         measure_node_latencies "start"
 
@@ -709,6 +712,9 @@ main() {
 
         save_experiment_config "$OUTPUT_DIR/config.yml"
         save_node_info "$OUTPUT_DIR/nodes.yml"
+        local failure_mig failure_instance
+        failure_mig=$(select_node_failure_mig)
+        failure_instance=$(select_node_failure_instance)
 
         start_application
 
@@ -717,7 +723,7 @@ main() {
         # Failure injection
         local start_ts
         start_ts=$(now)
-        inject_node_failure "$start_ts" &
+        inject_node_failure "$start_ts" "$failure_mig" "$failure_instance" &
 
         follow_logs
 
@@ -736,12 +742,11 @@ main() {
 
         measure_node_latencies "end"
 
+        disable_autoscaling
         reset_cluster
 
         echo "Experiment iteration $((i + 1))/$repeats finished"
     done
-
-    disable_autoscaling
 
     rm -r "$MANIFESTS_PATH"
     echo "All experiment iterations complete!"
