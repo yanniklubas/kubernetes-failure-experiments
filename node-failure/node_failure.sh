@@ -12,7 +12,7 @@ LARGE_POOL="large-pool"
 
 # LOADGENERATOR CONFIGURATION
 LUA_FILE="$PWD/workloads/node-failure.lua"
-PROFILE="$PWD/load/constant_36rps_15min.csv"
+PROFILE="$PWD/load/real-trace-scaled.csv"
 VIRTUAL_USERS=360
 TIMEOUT=10000
 WARMUP_DURATION=120
