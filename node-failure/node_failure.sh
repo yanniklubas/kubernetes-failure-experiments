@@ -713,7 +713,6 @@ main() {
         mkdir -p "$OUTPUT_DIR"
 
         echo "Starting experiment iteration $((i + 1))/$repeats..."
-        enable_autoscaling
 
         measure_node_latencies "start"
 
@@ -727,8 +726,10 @@ main() {
         local failure_mig failure_instance
         failure_mig=$(select_node_failure_mig)
         failure_instance=$(select_node_failure_instance)
+        kubectl patch node "$failure_instance" -p '{"metadata":{"finalizers":["example.com/hold-node"]}}'
 
         start_application
+        enable_autoscaling
 
         start_loadgenerator
 
@@ -742,6 +743,8 @@ main() {
         # Container stats
         local end_ts
         end_ts=$(now)
+        kubectl get node "$failure_instance" -o jsonpath='{.spec.taints}' >"$OUTPUT_DIR/taints.json"
+        kubectl patch node "$failure_instance" --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
         save_container_stats "$start_ts" "$end_ts"
 
         if [[ "$WITH_CIRCUITBREAKER" == true ]]; then
