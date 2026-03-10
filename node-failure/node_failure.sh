@@ -343,6 +343,7 @@ start_application() {
                 kubectl apply -f "$TEMPLATES_PATH/$service-deployment.yaml"
             fi
             kubectl apply -f "$TEMPLATES_PATH/$service-service.yaml"
+            kubectl wait --for=jsonpath='{.spec.nodeName}' pod -l "service=$service" --timeout=-1s
         done
     }
 
