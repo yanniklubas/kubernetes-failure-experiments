@@ -121,6 +121,16 @@ save_node_info() {
     fi
 }
 
+save_pod_info() {
+    local out_file="$1"
+    if kubectl get pods -A --field-selector metadata.namespace!=default -o yaml >"$out_file"; then
+        echo "System pod info saved!"
+    else
+        echo "Failed to save system pod info!"
+        exit 1
+    fi
+}
+
 log_scheduling_events() {
     local start_time
     start_time=$(date -u +%s)
@@ -149,7 +159,6 @@ log_node_events() {
         --field-selector involvedObject.kind=Node \
         -o json |
         jq --unbuffered --argjson start_time "$start_time" '
-select(.reason=="NodeReady" or .reason=="NodeNotReady") |
 select(.lastTimestamp != null or .eventTime != null) |
 .timestamp = (.lastTimestamp // .eventTime) |
 .clean_timestamp = (.timestamp | sub("\\.[0-9]+Z$"; "Z")) |
@@ -262,6 +271,7 @@ start_application() {
             echo "Applying service: $service"
             kubectl apply -f "$TEMPLATES_PATH/$service-deployment.yaml"
             kubectl apply -f "$TEMPLATES_PATH/$service-service.yaml"
+            kubectl wait --for=jsonpath='{.spec.nodeName}' pod -l "service=$service" --timeout=-1s
         done
     }
 
@@ -510,6 +520,7 @@ inject_node_failure() {
     local sleep_secs now_ts wake_ts
 
     wake_ts=$((start_ts + WARMUP_DURATION + WARMUP_PAUSE + NODE_FAILURE_TIME))
+    echo "$wake_ts" >"$OUTPUT_DIR/node_failure_time"
     now_ts=$(now)
 
     sleep_secs=$((wake_ts - now_ts))
@@ -546,7 +557,7 @@ inject_node_failure() {
 start_failure_instance() {
     if gcloud compute instances start "$NODE_FAILURE_INSTANCE" --zone="$NODE_FAILURE_ZONE"; then
         echo "Node '$NODE_FAILURE_INSTANCE' started successfully." >&2
-        kubectl label node "$NODE_FAILURE_INSTANCE" node-role=worker topology.kubernetes.io/region=us
+        kubectl label node "$NODE_FAILURE_INSTANCE" node-role=worker topology.kubernetes.io/region=us topology.kubernetes.io/zone=us
     else
         echo "Failed to start node '$NODE_FAILURE_INSTANCE'." >&2
         exit 1
@@ -737,6 +748,9 @@ main() {
 
         save_experiment_config "$OUTPUT_DIR/config.yml"
         save_node_info "$OUTPUT_DIR/nodes.yml"
+        save_pod_info "$OUTPUT_DIR/system-pod.yaml"
+
+        kubectl patch node "$NODE_FAILURE_INSTANCE" -p '{"metadata":{"finalizers":["example.com/hold-node"]}}'
 
         start_application
 
@@ -752,6 +766,8 @@ main() {
         # Container stats
         local end_ts
         end_ts=$(now)
+        kubectl get node "$NODE_FAILURE_INSTANCE" -o jsonpath='{.spec.taints}' >"$OUTPUT_DIR/taints.json"
+        kubectl patch node "$NODE_FAILURE_INSTANCE" --type json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
         save_container_stats "$start_ts" "$end_ts"
 
         kill_jobs
