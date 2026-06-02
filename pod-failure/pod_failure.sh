@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-EMAIL="yannik.lubas@uni-wuerzburg.de"
+EMAIL="$(kubectl auth whoami -o jsonpath='{.status.userInfo.username}{"\n"}')"
 
 # EXPERIMENT CONFIGURATION
 WITH_RETRY=false
