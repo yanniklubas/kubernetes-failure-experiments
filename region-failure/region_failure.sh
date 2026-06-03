@@ -28,7 +28,7 @@ EXPERIMENT_NAME="region-failure"
 BASE_DIR="$PWD/$EXPERIMENT_NAME"
 
 NODE_FAILURE_INSTANCE=""
-NODE_FAILURE_ZONE="us-central1-f"
+NODE_FAILURE_ZONE="us-central1-a"
 
 REGIONS=("us" "asia" "eu" "southamerica")
 select_node_failure_instance() {
@@ -387,7 +387,7 @@ setup_loadgenerator() {
         case "$region" in
         us)
             node="yannik-load"
-            zone="us-central1-f"
+            zone="us-central1-a"
             ;;
         eu)
             node="yannik-load-europe"
@@ -429,7 +429,7 @@ start_load_generator_remote() {
     case "$region" in
     us)
         node="yannik-load"
-        zone="us-central1-f"
+        zone="us-central1-a"
         ;;
     eu)
         node="yannik-load-europe"
