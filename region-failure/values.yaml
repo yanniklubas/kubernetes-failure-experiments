@@ -160,6 +160,7 @@ rabbitmq:
                 operator: In
                 values:
                   - rabbitmq
+          topologyKey: "kubernetes.io/hostname"
   nodeSelector:
     node-role: web
   tolerations:
