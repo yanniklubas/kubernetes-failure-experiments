@@ -25,8 +25,8 @@ nodeport: true
 openshift: false
 ocCreateRoute: false
 defaultReplicas: 4
-rabbitmqReplicas: 1
-redisReplicas: 3
+rabbitmqReplicas: 4
+redisReplicas: 4
 topologyAwareServices: true
 ######################################
 # Affinities for individual workloads
@@ -50,7 +50,7 @@ cart:
                   - cart
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -68,7 +68,7 @@ catalogue:
                   - catalogue
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -86,13 +86,13 @@ dispatch:
                   - dispatch
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 mongodb:
   nodeSelector:
-    node-role: worker
+    node-role: web
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -104,13 +104,13 @@ mongodb:
                   - mongodb
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 mysql:
   nodeSelector:
-    node-role: worker
+    node-role: web
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -122,7 +122,7 @@ mysql:
                   - mysql
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -146,24 +146,24 @@ payment:
                   - payment
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
 rabbitmq:
   affinity:
-    nodeAffinity:
+    podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: topology.kubernetes.io/region
-                operator: NotIn
+        - labelSelector:
+            matchExpressions:
+              - key: service
+                operator: In
                 values:
-                  - us
+                  - rabbitmq
   nodeSelector:
-    node-role: worker
+    node-role: web
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -181,7 +181,7 @@ ratings:
                   - ratings
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -189,7 +189,7 @@ redis:
   # Storage class to use with redis statefulset.
   storageClassName: standard
   nodeSelector:
-    node-role: worker
+    node-role: web
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -200,16 +200,8 @@ redis:
                 values:
                   - redis
           topologyKey: "kubernetes.io/hostname"
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: topology.kubernetes.io/region
-                operator: NotIn
-                values:
-                  - us
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -227,7 +219,7 @@ shipping:
                   - shipping
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1
@@ -245,7 +237,7 @@ user:
                   - user
           topologyKey: "kubernetes.io/hostname"
   tolerations:
-    - key: "node.kubernetes.io/not-ready"
+    - key: "node.kubernetes.io/unreachable"
       operator: "Exists"
       effect: "NoExecute"
       tolerationSeconds: 1

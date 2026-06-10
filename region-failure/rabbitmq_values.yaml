@@ -3,30 +3,34 @@ rabbitmqImage:
 credentialUpdaterImage:
   repository: bitnamilegacy/rmq-default-credential-updater
 clusterOperator:
+  replicaCount: 4
   image:
     repository: bitnamilegacy/rabbitmq-cluster-operator
   nodeSelector:
-    node-role: worker
+    node-role: web
   affinity:
-    nodeAffinity:
+    podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: topology.kubernetes.io/region
-                operator: NotIn
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
                 values:
-                  - us
+                  - rabbitmq-operator
+          topologyKey: "kubernetes.io/hostname"
 msgTopologyOperator:
+  replicaCount: 4
   image:
     repository: bitnamilegacy/rmq-messaging-topology-operator
   nodeSelector:
-    node-role: worker
+    node-role: web
   affinity:
-    nodeAffinity:
+    podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: topology.kubernetes.io/region
-                operator: NotIn
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
                 values:
-                  - us
+                  - messaging-topology-operator
+          topologyKey: "kubernetes.io/hostname"
