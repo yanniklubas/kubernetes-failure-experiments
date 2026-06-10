@@ -3,8 +3,10 @@ rabbitmqImage:
 credentialUpdaterImage:
   repository: bitnamilegacy/rmq-default-credential-updater
 clusterOperator:
+  schedulerName: kube
   image:
     repository: bitnamilegacy/rabbitmq-cluster-operator
 msgTopologyOperator:
+  schedulerName: kube
   image:
     repository: bitnamilegacy/rmq-messaging-topology-operator
