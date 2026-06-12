@@ -335,6 +335,7 @@ start_application() {
     kubectl get deployment rabbitmq-operator-rabbitmq-messaging-topology-operator -o yaml >"$BASE_DIR/manifests/rabbitmq-messaging-topology-operator-deployment.yaml"
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/componenty=rabbitmq-operator --timeout -1s
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=messaging-topology-operator --timeout -1s
+    kubectl patch svc rabbitmq-operator-rabbitmq-messaging-topology-operator-webhook --type=merge -p '{"spec":{"trafficDistribution":"PreferClose"}}'
 
     echo "Applying service: redis"
     kubectl apply -f "$TEMPLATES_PATH/redis-statefulset.yaml"
@@ -391,7 +392,7 @@ setup_loadgenerator() {
             ;;
         eu)
             node="yannik-load-europe"
-            zone="europe-west1-d"
+            zone="europe-west1-c"
             ;;
         asia)
             node="yannik-load-asia"
@@ -433,7 +434,7 @@ start_load_generator_remote() {
         ;;
     eu)
         node="yannik-load-europe"
-        zone="europe-west1-d"
+        zone="europe-west1-c"
         ;;
     asia)
         node="yannik-load-asia"
@@ -708,7 +709,7 @@ save_region_loadgenerator_files() {
         case "$region" in
         "eu")
             node="yannik-load-europe"
-            zone="europe-west1-d"
+            zone="europe-west1-c"
             ;;
         "asia")
             node="yannik-load-asia"
