@@ -665,6 +665,8 @@ main() {
         save_node_info "$OUTPUT_DIR/nodes.yml"
         save_pod_info "$OUTPUT_DIR/system-pod.yaml"
 
+        local start_time
+        start_time=$(date +"%Y-%m-%dT%H:%M:%SZ")
         start_application
 
         start_loadgenerator
@@ -675,9 +677,6 @@ main() {
         inject_pod_failure "$start_ts" &
 
         follow_logs
-
-        local start_time
-        start_time=$(date -u -d "@$start_ts" +"%Y-%m-%dT%H:%M:%SZ")
 
         kubectl logs -l app=kube -n kube-system --since-time="$start_time" >"$OUTPUT_DIR/scheduler.log" 2>&1
 
