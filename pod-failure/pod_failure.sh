@@ -678,7 +678,7 @@ main() {
 
         follow_logs
 
-        kubectl logs -l app=kube -n kube-system --since-time="$start_time" >"$OUTPUT_DIR/scheduler.log" 2>&1
+        kubectl logs -l app=kube -n kube-system --since-time="$start_time" --tail=-1 >"$OUTPUT_DIR/scheduler.log" 2>&1
 
         # Container stats
         local end_ts
