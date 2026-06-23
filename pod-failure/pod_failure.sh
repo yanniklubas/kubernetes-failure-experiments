@@ -676,6 +676,11 @@ main() {
 
         follow_logs
 
+        local start_time
+        start_time=$(date -u -d "@$start_ts" +"%Y-%m-%dT%H:%M:%SZ")
+
+        kubectl logs -l app=kube -n kube-system --since-time="$start_time" >"$OUTPUT_DIR/scheduler.log" 2>&1
+
         # Container stats
         local end_ts
         end_ts=$(now)
