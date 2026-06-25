@@ -126,7 +126,7 @@ log_scheduling_events() {
     start_time=$(date -u +%s)
 
     kubectl get events \
-        -all-namespaces \
+        --all-namespaces \
         --watch \
         --field-selector involvedObject.kind=Pod \
         -o json |
